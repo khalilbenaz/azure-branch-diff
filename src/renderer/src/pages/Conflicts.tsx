@@ -143,7 +143,7 @@ export function Conflicts({ active }: { active: boolean }) {
             PR #{pr.id} · {pr.title}
           </strong>
           <span className="mono muted">
-            {pr.sourceBranch} → {pr.targetBranch}
+            {pr.targetBranch} ← {pr.sourceBranch}
           </span>
         </div>
         {list && list.length > 0 && (

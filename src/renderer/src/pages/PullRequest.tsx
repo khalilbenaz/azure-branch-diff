@@ -132,7 +132,7 @@ export function PullRequest() {
         <div className="title">
           <strong>{pr ? `PR #${pr.id} · ${pr.title}` : 'Pull Request'}</strong>
           <span className="mono muted">
-            {sel.repo.repoName} · {sel.source} → {sel.target}
+            {sel.repo.repoName} · {sel.target} ← {sel.source}
           </span>
         </div>
         <span className="spacer" />

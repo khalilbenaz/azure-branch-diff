@@ -162,7 +162,7 @@ export function Merge({ active }: { active: boolean }) {
         <div className="title">
           <strong>Merge local</strong>
           <span className="mono muted">
-            {m.sourceLabel} → {m.targetLabel}
+            {m.targetLabel} ← {m.sourceLabel}
           </span>
         </div>
         {m.conflicts.length > 0 && open_ && (

@@ -34,18 +34,6 @@ export function Resolver({ path, sides, sourceLabel, targetLabel, busy, submitLa
       <div className="resolver-top">
         <div className="pane">
           <div className="pane-title">
-            <span className="dot" style={{ background: 'var(--accent)' }} />
-            <strong>Source</strong>
-            <span className="mono muted">{sourceLabel}</span>
-            <span className="spacer" />
-            <button className="btn btn-sm" onClick={() => setResult(sides.source.content)}>
-              Garder source
-            </button>
-          </div>
-          <Editor value={sides.source.content} language={lang} theme={theme} options={ro} />
-        </div>
-        <div className="pane">
-          <div className="pane-title">
             <span className="dot" style={{ background: 'var(--warn)' }} />
             <strong>Cible</strong>
             <span className="mono muted">{targetLabel}</span>
@@ -55,6 +43,18 @@ export function Resolver({ path, sides, sourceLabel, targetLabel, busy, submitLa
             </button>
           </div>
           <Editor value={sides.target.content} language={lang} theme={theme} options={ro} />
+        </div>
+        <div className="pane">
+          <div className="pane-title">
+            <span className="dot" style={{ background: 'var(--accent)' }} />
+            <strong>Source</strong>
+            <span className="mono muted">{sourceLabel}</span>
+            <span className="spacer" />
+            <button className="btn btn-sm" onClick={() => setResult(sides.source.content)}>
+              Garder source
+            </button>
+          </div>
+          <Editor value={sides.source.content} language={lang} theme={theme} options={ro} />
         </div>
       </div>
       <div className="pane result">
