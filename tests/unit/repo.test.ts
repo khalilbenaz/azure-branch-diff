@@ -46,3 +46,39 @@ test('resolveCommit renvoie le SHA de la référence', async () => {
   expect(sha).toMatch(/^[0-9a-f]{40}$/);
   expect(sha).toBe(git(clone, 'rev-parse', 'origin/feature/data'));
 });
+
+import { mkdirSync as mk } from 'node:fs';
+
+test('dossier parent de plusieurs clones : les dépôts trouvés sont proposés', async () => {
+  const parent = tempDir();
+  for (const n of ['api', 'web']) {
+    mk(join(parent, n));
+    git(join(parent, n), 'init', '-q');
+  }
+  mk(join(parent, 'docs'));
+  await repoRoot(parent).then(
+    () => expect.unreachable(),
+    (e) => {
+      const m = normalizeError(e).message;
+      expect(m).toMatch(/pas un dépôt git/);
+      expect(m).toContain(parent);
+      expect(m).toMatch(/api.*web/);
+      expect(m).not.toMatch(/docs/);
+    },
+  );
+});
+
+test('git absent : message explicite', async () => {
+  const before = process.env.PATH;
+  process.env.PATH = tempDir();
+  process.env.ABD_NO_GIT_EXTRA_PATH = '1';
+  try {
+    await repoRoot(tempDir()).then(
+      () => expect.unreachable(),
+      (e) => expect(normalizeError(e).message).toMatch(/git est introuvable/),
+    );
+  } finally {
+    process.env.PATH = before;
+    delete process.env.ABD_NO_GIT_EXTRA_PATH;
+  }
+});

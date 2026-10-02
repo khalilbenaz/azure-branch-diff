@@ -43,7 +43,7 @@ Le jeton est chiffré par le trousseau du système (Keychain macOS, DPAPI Window
 
 ## Utilisation
 
-Dans la barre latérale : le **dépôt Azure** et/ou le **clone local**. Dans la barre d'outils, pour la **Source** et la **Cible** : `Azure` ou `Local`, puis la branche.
+Dans la barre latérale : le **dépôt Azure** et/ou le **clone local** (choisi à sa racine). Un **dossier sans git** (archive téléchargée, export) est accepté aussi : il se compare à une branche Azure, à une branche d'un clone ou à un autre dossier ; seul le merge exige un vrai clone. Dans la barre d'outils, pour la **Source** et la **Cible** : `Azure` ou `Local`, puis la branche.
 
 | Source → Cible | Comparer | PR Azure | Fusionner (merge local) |
 |---|---|---|---|

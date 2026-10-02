@@ -131,3 +131,23 @@ test('bandeau de mise à jour : version disponible, progression, prête', async 
   await page.getByRole('button', { name: 'Au prochain lancement' }).click();
   await expect(page.getByRole('button', { name: 'Redémarrer pour installer' })).toHaveCount(0);
 });
+
+test('barre d’outils : sélecteurs, ⇄, mode et boutons alignés sur la même ligne', async () => {
+  await page.setViewportSize({ width: 1400, height: 900 });
+  await page.getByRole('tab', { name: 'Comparer' }).click();
+  const bottom = async (l: ReturnType<typeof page.locator>) => {
+    const b = (await l.boundingBox())!;
+    return Math.round(b.y + b.height);
+  };
+  const ref = await bottom(page.getByLabel('Branche source'));
+  for (const l of [
+    page.getByLabel('Branche cible'),
+    page.getByRole('button', { name: 'Inverser source et cible' }),
+    page.getByLabel('Mode de comparaison'),
+    page.getByRole('button', { name: 'Comparer', exact: true }),
+    page.getByRole('button', { name: 'Fusionner' }),
+  ]) {
+    expect(Math.abs((await bottom(l)) - ref)).toBeLessThanOrEqual(1);
+  }
+  await page.setViewportSize({ width: 1280, height: 800 });
+});

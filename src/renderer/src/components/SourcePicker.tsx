@@ -74,9 +74,11 @@ function SideCard({ role, draft, onDraft, branches }: SideCardProps) {
         >
           <option value="">— référence —</option>
           <option value="worktree">
-            {role === 'source'
-              ? `copie de travail${clone.current ? ` (${clone.current}${clone.dirty ? ', modifiée' : ''})` : ''}`
-              : `branche extraite${clone.current ? ` (${clone.current}, HEAD)` : ''}`}
+            {!clone.git
+              ? 'contenu du dossier (sans git)'
+              : role === 'source'
+                ? `copie de travail${clone.current ? ` (${clone.current}${clone.dirty ? ', modifiée' : ''})` : ''}`
+                : `branche extraite${clone.current ? ` (${clone.current}, HEAD)` : ''}`}
           </option>
           {clone.branches.length > 0 && (
             <optgroup label="Branches locales">

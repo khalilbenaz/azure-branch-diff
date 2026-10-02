@@ -51,13 +51,13 @@ test('local ↔ local : copie de travail comme source', async () => {
   expect(sides.right.content).toBe('wip\n');
 });
 
-test('local ↔ local : deux clones différents refusés', async () => {
+test('local ↔ local : deux clones différents comparés par empreintes (dernières versions)', async () => {
   const a = makeOrigin().clone;
   const b = makeOrigin().clone;
-  await compareSides(null, local(a, { type: 'branch', name: 'master' }), local(b, { type: 'branch', name: 'master' }), 'tips').then(
-    () => expect.unreachable(),
-    (e) => expect(normalizeError(e).message).toMatch(/même clone/),
-  );
+  commitFile(b, 'only-b.txt', 'b\n');
+  const cmp = await compareSides(null, local(b, { type: 'branch', name: 'master' }), local(a, { type: 'branch', name: 'master' }), 'mergeBase');
+  expect(cmp.kind).toBe('mixed');
+  expect(cmp.changes.map((c) => [c.path, c.change])).toEqual([['only-b.txt', 'add']]);
 });
 
 test('Azure ↔ local (mixte) : comparaison par empreintes, contenu des deux côtés', async () => {

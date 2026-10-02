@@ -217,14 +217,16 @@ label.check input { height: auto; }
 .toolbar .folder { display: flex; gap: 6px; align-items: center; min-width: 0; }
 .toolbar .folder input { font-family: var(--mono); font-size: 12.5px; width: 260px; }
 .toolbar.sides { align-items: stretch; flex-wrap: nowrap; }
-.side-card { flex: 1 1 0; min-width: 0; display: flex; flex-direction: column; gap: 6px; padding: 8px 10px; border: 1px solid var(--line); border-radius: 10px; background: var(--panel-2); }
+/* Les commandes hors carte s'alignent sur les sélecteurs des cartes : même retrait que padding + bordure de la carte. */
+.toolbar.sides { --card-pad: 8px; --card-inset: calc(var(--card-pad) + 1px); }
+.side-card { flex: 1 1 0; min-width: 0; display: flex; flex-direction: column; gap: 6px; padding: var(--card-pad) 10px; border: 1px solid var(--line); border-radius: 10px; background: var(--panel-2); }
 .side-card-head { display: flex; align-items: center; gap: 8px; }
 .side-card-head .eyebrow { font-weight: 600; }
 .side-card select.branch { width: 100%; }
 .segmented.xs { height: 28px; border-radius: 7px; }
 .segmented.xs button { font-size: 12px; padding: 0 10px; }
-.toolbar .swap { align-self: center; }
-.toolbar-actions { display: flex; align-items: flex-end; gap: 8px; flex-wrap: wrap; justify-content: flex-end; }
+.toolbar .swap { align-self: flex-end; margin-bottom: var(--card-inset); }
+.toolbar-actions { display: flex; align-items: flex-end; gap: 8px; flex-wrap: wrap; justify-content: flex-end; padding-bottom: var(--card-inset); }
 .toolbar-note { padding: 6px 20px; font-size: 12.5px; color: var(--muted); background: var(--panel); border-bottom: 1px solid var(--line-soft); }
 
 /* Comparer */

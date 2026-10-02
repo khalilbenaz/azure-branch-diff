@@ -106,3 +106,20 @@ test('comparaison avec un dossier local', async () => {
   await page.getByRole('tab', { name: 'Pull Request' }).click();
   await expect(page.getByText(/Comparez d'abord deux branches Azure/)).toBeVisible();
 });
+
+test('dossier téléchargé sans git : ouvert sans erreur et comparé à une branche Azure', async () => {
+  const dir = mkdtempSync(join(tmpdir(), 'abd-zip-'));
+  mkdirSync(join(dir, 'src'));
+  writeFileSync(join(dir, 'src/Service.cs'), 'from zip\n');
+  await app.evaluate(({ dialog }, folder) => {
+    dialog.showOpenDialog = async () => ({ canceled: false, filePaths: [folder] });
+  }, dir);
+  await page.getByRole('tab', { name: 'Comparer' }).click();
+  await page.getByRole('button', { name: 'Clone local' }).click();
+  await expect(page.getByRole('button', { name: 'Clone local' })).toContainText(basename(realpathSync.native(dir)));
+  await expect(page.locator('.banner-error')).toHaveCount(0);
+  await page.getByLabel('Référence source').selectOption('worktree');
+  await page.getByRole('button', { name: 'Comparer', exact: true }).click();
+  await page.getByRole('button', { name: /Service\.cs/ }).click();
+  await expect(page.locator('.monaco-diff-editor')).toBeVisible();
+});

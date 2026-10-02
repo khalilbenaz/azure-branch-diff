@@ -10,7 +10,8 @@ import { EMPTY_SIDE, getFileSide, listBranchChanges, listTree, toFileSide } from
 import { completePr, createPr, fileWebUrl, findActivePr, getPr, prConflictsUrl, waitMergeStatus } from './azure/pr';
 import { getConflictSides, listConflicts, resolveConflict } from './azure/conflicts';
 import { compareSides, sidesContent } from './compare/compareSides';
-import { refSpec, repoInfo, repoRoot } from './local/repo';
+import { inspectFolder, refSpec, repoInfo } from './local/repo';
+import { insideGitRepo } from './local/safeGit';
 import { MergeSession } from './merge/session';
 import { originMatches, pushLocalBranch } from './merge/origin';
 import { cleanupStaleMerges } from './merge/cleanup';
@@ -235,19 +236,19 @@ export function createHandlers(deps: HandlerDeps): Api {
     localRepo: (dir) =>
       wrap(async () => {
         const chosen = approvedRoot(dir);
-        const root = await repoRoot(chosen);
-        // Jamais d'élargissement : le dossier choisi doit être la racine du dépôt.
-        if (root !== chosen) throw fail('unknown', `Choisissez la racine du dépôt : ${root}`);
-        await assertSafeRepo(root);
-        if (!merge && !mergeStarting) await cleanupStaleMerges([root]); // restes d'un arrêt brutal pendant un merge
-        return repoInfo(root);
+        // Jamais d'élargissement : dépôt git choisi à sa racine exacte, ou dossier simple.
+        const info = await inspectFolder(chosen);
+        if (!info.git) return info;
+        await assertSafeRepo(info.root, 'read');
+        if (!merge && !mergeStarting) await cleanupStaleMerges([info.root]); // restes d'un arrêt brutal pendant un merge
+        return info;
       }),
 
     compare: (src, tgt, m) =>
       wrap(async (): Promise<CompareResult> => {
         const [source, target] = [side(src), side(tgt)];
         const mode = oneOf(m, ['mergeBase', 'tips'] as const, 'mode');
-        for (const s of [source, target]) if (s.kind === 'local') await assertSafeRepo(s.root);
+        for (const s of [source, target]) if (s.kind === 'local') await assertSafeRepo(s.root, 'read');
         return compareSides(session?.ctx ?? null, source, target, mode);
       }),
 
@@ -256,7 +257,7 @@ export function createHandlers(deps: HandlerDeps): Api {
         const [source, target] = [side(src), side(tgt)];
         const entry = changeEntry(e);
         for (const s of [source, target]) if (s.kind === 'local') insideRoot(s.root, entry.path);
-        for (const s of [source, target]) if (s.kind === 'local') await assertSafeRepo(s.root);
+        for (const s of [source, target]) if (s.kind === 'local') await assertSafeRepo(s.root, 'read');
         return sidesContent(session?.ctx ?? null, source, target, entry, commits(cmpArg));
       }),
 
@@ -314,6 +315,7 @@ export function createHandlers(deps: HandlerDeps): Api {
     mergeStart: (input) =>
       wrap(async () => {
         const i = mergeInput(input);
+        if (!(await insideGitRepo(i.root))) throw fail('unknown', 'Fusionner nécessite un clone git : ce dossier n’est pas un dépôt (archive téléchargée ?).');
         if (mergeStarting || (merge && !mergeDone(merge))) throw fail('unknown', 'Un merge est déjà en cours : terminez-le ou annulez-le.');
         mergeStarting = true;
         try {
