@@ -104,7 +104,7 @@ function SideCard({ role, draft, onDraft, branches }: SideCardProps) {
   );
 }
 
-/** Barre d'outils : Source → Cible (Azure ou local), mode, Comparer, PR, Fusionner. */
+/** Barre d'outils : Cible ← Source (Azure ou local), mode, Comparer, PR, Fusionner. */
 export function SourcePicker({ busy, onCompare, onError, onPr, onMerge }: Props) {
   const app = useApp();
   const { repo, clone } = app;
@@ -152,7 +152,8 @@ export function SourcePicker({ busy, onCompare, onError, onPr, onMerge }: Props)
   return (
     <>
       <div className="toolbar sides">
-        <SideCard role="source" draft={source} onDraft={setSource} branches={branches} />
+        {/* Ordre « cible ← source » : le même que le diff (gauche = cible, droite = source). */}
+        <SideCard role="cible" draft={target} onDraft={setTarget} branches={branches} />
         <button
           className="btn icon-btn swap"
           aria-label="Inverser source et cible"
@@ -164,7 +165,7 @@ export function SourcePicker({ busy, onCompare, onError, onPr, onMerge }: Props)
         >
           <IconSwap />
         </button>
-        <SideCard role="cible" draft={target} onDraft={setTarget} branches={branches} />
+        <SideCard role="source" draft={source} onDraft={setSource} branches={branches} />
         <div className="side-card actions-card">
           <div className="side-card-head">
             <span className="eyebrow">Mode</span>

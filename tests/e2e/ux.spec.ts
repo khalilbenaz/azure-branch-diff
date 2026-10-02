@@ -150,6 +150,9 @@ test('barre d’outils : trois cartes de même hauteur, contrôles alignés sur 
   }
   const heights = await page.locator('.toolbar .side-card').evaluateAll((els) => els.map((e) => Math.round(e.getBoundingClientRect().height)));
   expect(heights).toHaveLength(3);
+  // Même ordre que le diff : cible à gauche, source à droite.
+  const order = await page.locator('.toolbar .side-card .eyebrow').allInnerTexts();
+  expect(order.map((t) => t.toUpperCase())).toEqual(['CIBLE', 'SOURCE', 'MODE']);
   expect(new Set(heights).size).toBe(1);
   await page.setViewportSize({ width: 1280, height: 800 });
 });
