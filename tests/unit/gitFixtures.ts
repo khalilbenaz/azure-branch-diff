@@ -61,7 +61,8 @@ export function azureOrigin(clone: string, bare: string): () => void {
   const url = 'https://dev.azure.com/X/Demo/_git/Gateway';
   git(clone, 'remote', 'set-url', 'origin', url);
   const cfg = join(tempDir(), 'gitconfig');
-  writeFileSync(cfg, `[url "${bare}"]\n\tinsteadOf = ${url}\n[protocol "file"]\n\tallow = always\n`);
+  // Dans un fichier de config git, « \\ » est un échappement : chemin Windows écrit avec des « / ».
+  writeFileSync(cfg, `[url "${bare.replace(/\\/g, '/')}"]\n\tinsteadOf = ${url}\n[protocol "file"]\n\tallow = always\n`);
   const before = process.env.GIT_CONFIG_GLOBAL;
   process.env.GIT_CONFIG_GLOBAL = cfg;
   return () => {
