@@ -1,6 +1,24 @@
 export type AzureSource = { kind: 'azure'; project: string; repoId: string; branch: string };
 export type Source = AzureSource | { kind: 'local'; path: string };
 
+/** Référence d'un clone local : branche locale, branche distante origin/*, ou copie de travail (HEAD + fichiers sur disque). */
+export type LocalRef = { type: 'branch'; name: string } | { type: 'remote'; name: string } | { type: 'worktree' };
+export type LocalSide = { kind: 'local'; root: string; ref: LocalRef };
+/** Un côté d'une comparaison ou d'un merge. */
+export type Side = AzureSource | LocalSide;
+
+export interface LocalRepoInfo {
+  root: string;
+  /** Branche extraite (null si HEAD détachée). */
+  current: string | null;
+  /** Modifications non commitées dans la copie de travail. */
+  dirty: boolean;
+  branches: string[];
+  /** Branches de origin, sans le préfixe « origin/ ». */
+  remoteBranches: string[];
+  originUrl: string | null;
+}
+
 export type ChangeType = 'add' | 'edit' | 'delete' | 'rename';
 
 export interface ChangeEntry {
@@ -86,3 +104,33 @@ export type UpdateState =
   | { kind: 'downloading'; version: string; percent: number }
   | { kind: 'ready'; version: string }
   | { kind: 'error'; message: string };
+
+/** Merge local (voir src/main/merge). */
+export type MergeTarget = { kind: 'local'; branch: string } | { kind: 'remote'; branch: string };
+export type MergeSource = Extract<LocalRef, { type: 'branch' | 'remote' }>;
+export interface MergeStartInput {
+  root: string;
+  source: MergeSource;
+  target: MergeTarget;
+}
+export type MergeConflictKind = 'text' | 'binary' | 'deleted';
+export interface MergeConflict {
+  path: string;
+  kind: MergeConflictKind;
+  resolved: boolean;
+}
+export type MergePhase = 'conflicts' | 'ready' | 'upToDate' | 'committed' | 'pushed' | 'aborted';
+export interface MergeState {
+  root: string;
+  /** Dossier où se fait le merge (worktree temporaire ou copie de travail). */
+  dir: string;
+  location: 'worktree' | 'workingCopy';
+  sourceLabel: string;
+  targetLabel: string;
+  targetIsRemote: boolean;
+  phase: MergePhase;
+  conflicts: MergeConflict[];
+  commit?: string;
+}
+/** Résolution d'un conflit local : celles d'Azure, plus la suppression du fichier. */
+export type MergeResolution = Resolution | { kind: 'delete' };

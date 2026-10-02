@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import type { RepoRef } from '../../shared/api';
-import type { ApiError, PrSummary } from '../../shared/types';
+import type { ApiError, LocalRepoInfo, MergeState, PrSummary } from '../../shared/types';
 import { api, asApiError, call } from './lib/api';
 import { AppCtx, type AppState, type Selection, type Tab } from './lib/context';
 import { ErrorBanner } from './components/ErrorBanner';
@@ -10,6 +10,7 @@ import { Login } from './pages/Login';
 import { Compare } from './pages/Compare';
 import { PullRequest } from './pages/PullRequest';
 import { Conflicts } from './pages/Conflicts';
+import { Merge } from './pages/Merge';
 
 const updates = (window as unknown as { updates?: { get(): Promise<{ version: string }> } }).updates;
 
@@ -20,6 +21,8 @@ export default function App() {
   const [selection, setSelection] = useState<Selection | null>(null);
   const [pr, setPr] = useState<PrSummary | null>(null);
   const [repo, setRepo] = useState<RepoRef | null>(null);
+  const [clone, setClone] = useState<LocalRepoInfo | null>(null);
+  const [merge, setMerge] = useState<MergeState | null>(null);
   const [openConflicts, setOpenConflicts] = useState<number | null>(null);
   const [version, setVersion] = useState('');
   const [shellError, setShellError] = useState<ApiError | null>(null);
@@ -53,6 +56,29 @@ export default function App() {
             orgUrl,
             repo,
             setRepo,
+            clone,
+            merge,
+            setMerge,
+            pickClone: async () => {
+              try {
+                const dir = await call(api.pickFolder());
+                if (!dir) return null;
+                const info = await call(api.localRepo(dir));
+                setClone(info);
+                return info;
+              } catch (e) {
+                setShellError(asApiError(e));
+                return null;
+              }
+            },
+            refreshClone: async () => {
+              if (!clone) return;
+              try {
+                setClone(await call(api.localRepo(clone.root)));
+              } catch (e) {
+                setShellError(asApiError(e));
+              }
+            },
             setOpenConflicts,
             selection,
             setSelection,
@@ -65,12 +91,14 @@ export default function App() {
               setSelection(null);
               setPr(null);
               setRepo(null);
+              setClone(null);
+              setMerge(null);
               setOrgUrl(null);
               return true;
             },
           }
         : null,
-    [orgUrl, selection, pr, repo],
+    [orgUrl, selection, pr, repo, clone, merge],
   );
 
   if (orgUrl === undefined) return <div className="center muted">Chargement…</div>;
@@ -101,6 +129,8 @@ export default function App() {
     setSelection(null);
     setPr(null);
     setRepo(null);
+    setClone(null);
+    setMerge(null);
     setOrgUrl(null);
   }
 
@@ -132,6 +162,9 @@ export default function App() {
           </section>
           <section hidden={tab !== 'conflicts'} className="page">
             <Conflicts active={tab === 'conflicts'} />
+          </section>
+          <section hidden={tab !== 'merge'} className="page">
+            <Merge active={tab === 'merge'} />
           </section>
         </main>
       </div>

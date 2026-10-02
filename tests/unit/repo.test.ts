@@ -1,0 +1,48 @@
+import { test, expect } from 'vitest';
+import { mkdirSync, realpathSync } from 'node:fs';
+import { join } from 'node:path';
+import { repoRoot, repoInfo, refSpec, refName, resolveCommit } from '../../src/main/local/repo';
+import { normalizeError } from '../../src/main/errors';
+import { makeOrigin, git, writeFile } from './gitFixtures';
+import { tempDir } from './helpers';
+
+test('repoRoot : racine réelle depuis un sous-dossier ; erreur hors git', async () => {
+  const { clone } = makeOrigin();
+  mkdirSync(join(clone, 'src', 'deep'), { recursive: true });
+  expect(await repoRoot(join(clone, 'src', 'deep'))).toBe(realpathSync(clone));
+  await repoRoot(tempDir()).then(
+    () => expect.unreachable(),
+    (e) => expect(normalizeError(e).message).toMatch(/pas un dépôt git/),
+  );
+});
+
+test('repoInfo : branches locales, origin, branche courante, propreté, origin url', async () => {
+  const { clone, bare } = makeOrigin();
+  git(clone, 'branch', 'local-only');
+  let info = await repoInfo(clone);
+  expect(info.current).toBe('master');
+  expect(info.branches).toEqual(['local-only', 'master']);
+  expect(info.remoteBranches).toEqual(['feature/data', 'master']);
+  expect(info.dirty).toBe(false);
+  expect(info.originUrl).toBe(bare);
+  writeFile(clone, 'README.md', 'changed\n');
+  info = await repoInfo(clone);
+  expect(info.dirty).toBe(true);
+});
+
+test('refSpec / refName', () => {
+  expect(refSpec({ type: 'branch', name: 'feature/x' })).toBe('refs/heads/feature/x');
+  expect(refSpec({ type: 'remote', name: 'feature/x' })).toBe('refs/remotes/origin/feature/x');
+  expect(refSpec({ type: 'worktree' })).toBe('HEAD');
+  expect(refName({ type: 'remote', name: 'master' })).toBe('origin/master');
+  expect(refName({ type: 'worktree' })).toBe('copie de travail');
+  expect(() => refSpec({ type: 'branch', name: '-x' })).toThrow();
+  expect(() => refSpec({ type: 'branch', name: 'a..b' })).toThrow();
+});
+
+test('resolveCommit renvoie le SHA de la référence', async () => {
+  const { clone } = makeOrigin();
+  const sha = await resolveCommit(clone, { type: 'remote', name: 'feature/data' });
+  expect(sha).toMatch(/^[0-9a-f]{40}$/);
+  expect(sha).toBe(git(clone, 'rev-parse', 'origin/feature/data'));
+});

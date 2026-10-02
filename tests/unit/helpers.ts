@@ -2,6 +2,8 @@ import type { Cipher } from '../../src/main/auth';
 import { mkdtempSync, mkdirSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { dirname, join } from 'node:path';
+import { execFileSync } from 'node:child_process';
+import { realpathSync } from 'node:fs';
 
 export function tempDir(files: Record<string, string | Buffer> = {}): string {
   const root = mkdtempSync(join(tmpdir(), 'abd-'));
@@ -18,3 +20,13 @@ export const reverseCipher: Cipher = {
   encrypt: (s) => Buffer.from([...s].reverse().join('')),
   decrypt: (b) => [...b.toString()].reverse().join(''),
 };
+
+/** Dossier temporaire devenu dépôt git (sans commit) : utilisable comme côté local « copie de travail ». */
+export function gitDir(files: Record<string, string | Buffer> = {}): string {
+  const root = tempDir(files);
+  execFileSync('git', ['init', '-q'], { cwd: root });
+  return root;
+}
+
+/** Côté local « copie de travail » d'un dossier. */
+export const worktreeSide = (root: string) => ({ kind: 'local' as const, root: realpathSync(root), ref: { type: 'worktree' as const } });

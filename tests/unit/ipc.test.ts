@@ -4,7 +4,7 @@ import { createHandlers, type HandlerDeps } from '../../src/main/ipc';
 import { AuthStore } from '../../src/main/auth';
 import { fakeContext } from '../../src/main/azure/fake';
 import type { AzureSource, Result } from '../../src/shared/types';
-import { tempDir, reverseCipher } from './helpers';
+import { tempDir, reverseCipher, gitDir, worktreeSide } from './helpers';
 
 const TARGET: AzureSource = { kind: 'azure', project: 'Demo', repoId: 'repo1', branch: 'master' };
 const SOURCE: AzureSource = { kind: 'azure', project: 'Demo', repoId: 'repo1', branch: 'feature/data' };
@@ -104,29 +104,28 @@ test('compare refuses branches from two different repositories', async () => {
 });
 
 test('compare local↔azure and local file sides', async () => {
-  const root = tempDir({ 'src/Service.cs': 'local version\n', 'old.sql': 'select 1;\n', 'mine.cs': 'new\n' });
+  const root = gitDir({ 'src/Service.cs': 'local version\n', 'old.sql': 'select 1;\n', 'mine.cs': 'new\n' });
   const { api } = setup({ pickFolder: async () => root });
   ok(await api.login('https://dev.azure.com/X', 'pat'));
   ok(await api.pickFolder());
-  const local = { kind: 'local' as const, path: root };
-  const cmp = ok(await api.compare(local, TARGET, 'mergeBase'));
+  const local = worktreeSide(root);
+  const cmp = ok(await api.compare(local, TARGET, 'tips'));
   expect(cmp.changes.map((c) => [c.path, c.change])).toEqual([
     ['big.sql', 'delete'],
     ['mine.cs', 'add'],
     ['src/Service.cs', 'edit'],
   ]);
-  expect(cmp.local).toBeNull();
   const sides = ok(await api.fileSides(local, TARGET, cmp.changes[2], cmp));
   expect(sides.left.content).toContain('Amount => 20');
   expect(sides.right.content).toBe('local version\n');
 });
 
 test('local file sides refuse paths outside the chosen folder', async () => {
-  const root = tempDir({ 'a.cs': 'x' });
+  const root = gitDir({ 'a.cs': 'x' });
   const { api } = setup({ pickFolder: async () => root });
   ok(await api.login('https://dev.azure.com/X', 'pat'));
   ok(await api.pickFolder());
-  const r = await api.fileSides({ kind: 'local', path: root }, TARGET, { path: '../../etc/passwd', change: 'edit', isBinary: false }, { changes: [] });
+  const r = await api.fileSides(worktreeSide(root), TARGET, { path: '../../etc/passwd', change: 'edit', isBinary: false }, { changes: [] });
   expect(r.ok).toBe(false);
 });
 

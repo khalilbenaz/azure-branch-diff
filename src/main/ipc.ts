@@ -2,16 +2,21 @@ import { readFile } from 'node:fs/promises';
 import { existsSync, realpathSync } from 'node:fs';
 import { isAbsolute, relative, resolve, sep } from 'node:path';
 import type { Api, CompareResult, NewPrInput, RepoRef } from '../shared/api';
-import type { ApiError, AzureSource, ChangeEntry, CompleteOptions, FileSide, Resolution, Result, Source } from '../shared/types';
+import type { ApiError, AzureSource, ChangeEntry, CompleteOptions, LocalRef, MergeResolution, MergeStartInput, Resolution, Result, Side } from '../shared/types';
 import { AuthStore, testConnection } from './auth';
 import { type AzureContext, trimOrgUrl } from './azure/client';
 import { listBranches, listProjects, listRepos } from './azure/browse';
 import { EMPTY_SIDE, getFileSide, listBranchChanges, listTree, toFileSide } from './azure/diff';
 import { completePr, createPr, fileWebUrl, findActivePr, getPr, prConflictsUrl, waitMergeStatus } from './azure/pr';
 import { getConflictSides, listConflicts, resolveConflict } from './azure/conflicts';
-import { compareLocalToAzure } from './compare/compareLocal';
-import { getGitInfo } from './local/gitInfo';
+import { compareSides, sidesContent } from './compare/compareSides';
+import { refSpec, repoInfo, repoRoot } from './local/repo';
+import { MergeSession } from './merge/session';
+import { originMatches, pushLocalBranch } from './merge/origin';
+import { cleanupStaleMerges } from './merge/cleanup';
+import { assertSafeRepo } from './merge/safety';
 import { normalizeError } from './errors';
+import { insideRoot } from './paths';
 import { isSafeExternalUrl } from './urls';
 import { bool, int, obj, oneOf, str } from './validate';
 
@@ -20,28 +25,11 @@ export interface HandlerDeps {
   connect: (orgUrl: string, pat: string) => Promise<AzureContext>;
   pickFolder: () => Promise<string | null>;
   openExternal: (url: string) => Promise<void>;
+  /** Confirmation native avant une action sur le serveur (push). Absente : refusée. */
+  confirm?: (message: string, detail: string) => Promise<boolean>;
 }
 
 const fail = (code: ApiError['code'], message: string): ApiError => ({ code, message });
-
-/** Chemin local sûr : refuse tout chemin (ou lien symbolique) qui sortirait du dossier choisi. */
-export function insideRoot(root: string, path: string): string {
-  const realRoot = realpathSync(root);
-  const full = resolve(realRoot, path);
-  const real = existsSync(full) ? realpathSync(full) : full;
-  const rel = relative(realRoot, real);
-  if (rel === '..' || rel.startsWith('..' + sep) || isAbsolute(rel)) throw fail('unknown', 'Chemin hors du dossier sélectionné.');
-  return real;
-}
-
-async function readLocalSide(root: string, path: string): Promise<FileSide> {
-  try {
-    return toFileSide(await readFile(insideRoot(root, path)));
-  } catch (e) {
-    if ((e as NodeJS.ErrnoException).code === 'ENOENT') return EMPTY_SIDE;
-    throw e;
-  }
-}
 
 /** Implémentation de l'API côté main. Le PAT reste ici ; chaque erreur est normalisée et masquée. */
 export function createHandlers(deps: HandlerDeps): Api {
@@ -88,6 +76,50 @@ export function createHandlers(deps: HandlerDeps): Api {
     return real;
   };
 
+  const mergeInput = (v: unknown): MergeStartInput => {
+    const o = obj(v, 'merge');
+    const src = localRef(o.source);
+    if (src.type === 'worktree') throw fail('unknown', 'La source d’un merge doit être une branche.');
+    const t = obj(o.target, 'cible');
+    const kind = oneOf(t.kind, ['local', 'remote'] as const, 'cible');
+    const branch = str(t.branch, 'branche cible', 400);
+    refSpec({ type: 'branch', name: branch });
+    return { root: approvedRoot(o.root), source: src, target: { kind, branch } };
+  };
+  const mergeResolution = (v: unknown): MergeResolution => {
+    const o = obj(v, 'résolution');
+    if (o.kind === 'delete') return { kind: 'delete' };
+    return resolution(o);
+  };
+
+  let merge: MergeSession | null = null;
+  let mergeStarting = false;
+  const activeMerge = (): MergeSession => {
+    if (!merge) throw fail('unknown', 'Aucun merge en cours.');
+    return merge;
+  };
+  /** Terminé et sans risque de perte : un commit vers Azure non poussé n'est pas « terminé ». */
+  const mergeDone = (m: MergeSession) => {
+    const st = m.state();
+    return ['upToDate', 'pushed', 'aborted'].includes(st.phase) || (st.phase === 'committed' && !st.targetIsRemote);
+  };
+  /** Le push agit sur le serveur avec les identifiants git de l'utilisateur : confirmation native, hors de portée de l'interface. */
+  async function confirmPush(root: string, ref: string) {
+    const info = await repoInfo(root);
+    const ok = await (deps.confirm ?? (async () => false))(
+      `Pousser vers ${ref} ?`,
+      `Remote origin : ${info.originUrl ?? 'inconnu'}\nCette action modifie le dépôt distant.`,
+    );
+    if (!ok) throw fail('unknown', 'Push annulé.');
+  }
+  /** Une PR n'a de sens que si origin est bien le dépôt Azure où elle sera créée. */
+  async function assertOriginIs(root: string, r: RepoRef) {
+    const info = await repoInfo(root);
+    if (!originMatches(info.originUrl, session?.orgUrl ?? '', r.project, r.repoName)) {
+      throw fail('unknown', `L’origin du clone (${info.originUrl ?? 'aucun'}) n’est pas le dépôt Azure « ${r.repoName} » : PR impossible depuis ce clone.`);
+    }
+  }
+
   const repoRef = (v: unknown): RepoRef => {
     const o = obj(v, 'dépôt');
     return { project: str(o.project, 'projet'), repoId: str(o.repoId, 'dépôt'), repoName: str(o.repoName, 'nom du dépôt') };
@@ -97,9 +129,17 @@ export function createHandlers(deps: HandlerDeps): Api {
     oneOf(o.kind, ['azure'] as const, 'type de source');
     return { kind: 'azure', project: str(o.project, 'projet'), repoId: str(o.repoId, 'dépôt'), branch: str(o.branch, 'branche') };
   };
-  const source = (v: unknown): Source => {
-    const o = obj(v, 'source');
-    return o.kind === 'local' ? { kind: 'local', path: approvedRoot(o.path) } : azureSource(o);
+  const localRef = (v: unknown): LocalRef => {
+    const o = obj(v, 'référence locale');
+    const type = oneOf(o.type, ['branch', 'remote', 'worktree'] as const, 'type de référence');
+    if (type === 'worktree') return { type };
+    const name = str(o.name, 'branche', 400);
+    refSpec({ type, name }); // refuse les noms dangereux
+    return { type, name };
+  };
+  const side = (v: unknown): Side => {
+    const o = obj(v, 'côté');
+    return o.kind === 'local' ? { kind: 'local', root: approvedRoot(o.root), ref: localRef(o.ref) } : azureSource(o);
   };
   const changeEntry = (v: unknown): ChangeEntry => {
     const o = obj(v, 'fichier');
@@ -110,11 +150,15 @@ export function createHandlers(deps: HandlerDeps): Api {
       isBinary: !!o.isBinary,
     };
   };
-  const commits = (v: unknown): Pick<CompareResult, 'baseCommit' | 'sourceCommit'> => {
+  const commits = (v: unknown): CompareResult => {
     const o = obj(v, 'comparaison');
+    const opt = (k: 'baseCommit' | 'sourceCommit' | 'targetCommit') => (o[k] !== undefined ? { [k]: str(o[k], 'commit', 400) } : {});
     return {
-      ...(o.baseCommit !== undefined ? { baseCommit: str(o.baseCommit, 'commit') } : {}),
-      ...(o.sourceCommit !== undefined ? { sourceCommit: str(o.sourceCommit, 'commit') } : {}),
+      changes: [],
+      ...(o.kind !== undefined ? { kind: oneOf(o.kind, ['azure', 'local', 'mixed'] as const, 'type de comparaison') } : {}),
+      ...opt('baseCommit'),
+      ...opt('sourceCommit'),
+      ...opt('targetCommit'),
     };
   };
   const resolution = (v: unknown): Resolution => {
@@ -188,40 +232,32 @@ export function createHandlers(deps: HandlerDeps): Api {
         return p;
       }),
 
+    localRepo: (dir) =>
+      wrap(async () => {
+        const chosen = approvedRoot(dir);
+        const root = await repoRoot(chosen);
+        // Jamais d'élargissement : le dossier choisi doit être la racine du dépôt.
+        if (root !== chosen) throw fail('unknown', `Choisissez la racine du dépôt : ${root}`);
+        await assertSafeRepo(root);
+        if (!merge && !mergeStarting) await cleanupStaleMerges([root]); // restes d'un arrêt brutal pendant un merge
+        return repoInfo(root);
+      }),
+
     compare: (src, tgt, m) =>
       wrap(async (): Promise<CompareResult> => {
-        const c = ctx();
-        const target = azureSource(tgt);
-        const from = source(src);
+        const [source, target] = [side(src), side(tgt)];
         const mode = oneOf(m, ['mergeBase', 'tips'] as const, 'mode');
-        if (from.kind === 'azure') {
-          if (from.repoId !== target.repoId) throw fail('unknown', 'Les deux branches doivent appartenir au même dépôt.');
-          return listBranchChanges(c, target.project, target.repoId, from.branch, target.branch, mode);
-        }
-        const tree = await listTree(c, target.project, target.repoId, target.branch);
-        const [changes, local] = await Promise.all([compareLocalToAzure(from.path, tree), getGitInfo(from.path)]);
-        return { changes, local };
+        for (const s of [source, target]) if (s.kind === 'local') await assertSafeRepo(s.root);
+        return compareSides(session?.ctx ?? null, source, target, mode);
       }),
 
     fileSides: (src, tgt, e, cmpArg) =>
       wrap(async () => {
-        const c = ctx();
-        const target = azureSource(tgt);
-        const from = source(src);
+        const [source, target] = [side(src), side(tgt)];
         const entry = changeEntry(e);
-        const cmp = commits(cmpArg);
-        const leftPath = entry.originalPath ?? entry.path;
-        if (from.kind === 'local') {
-          insideRoot(from.path, entry.path);
-          const left = entry.change === 'add' ? EMPTY_SIDE : await getFileSide(c, target.project, target.repoId, leftPath, target.branch, 'branch');
-          const right = entry.change === 'delete' ? EMPTY_SIDE : await readLocalSide(from.path, entry.path);
-          return { left, right };
-        }
-        const [left, right] = await Promise.all([
-          entry.change === 'add' ? EMPTY_SIDE : getFileSide(c, target.project, target.repoId, leftPath, cmp.baseCommit ?? ''),
-          entry.change === 'delete' ? EMPTY_SIDE : getFileSide(c, target.project, target.repoId, entry.path, cmp.sourceCommit ?? ''),
-        ]);
-        return { left, right };
+        for (const s of [source, target]) if (s.kind === 'local') insideRoot(s.root, entry.path);
+        for (const s of [source, target]) if (s.kind === 'local') await assertSafeRepo(s.root);
+        return sidesContent(session?.ctx ?? null, source, target, entry, commits(cmpArg));
       }),
 
     findPr: (r, src, tgt) =>
@@ -273,6 +309,86 @@ export function createHandlers(deps: HandlerDeps): Api {
       wrap(async () => {
         const x = repoRef(r);
         return fileWebUrl(ctx().orgUrl, x.project, x.repoName, str(path, 'chemin'), str(branch, 'branche'));
+      }),
+
+    mergeStart: (input) =>
+      wrap(async () => {
+        const i = mergeInput(input);
+        if (mergeStarting || (merge && !mergeDone(merge))) throw fail('unknown', 'Un merge est déjà en cours : terminez-le ou annulez-le.');
+        mergeStarting = true;
+        try {
+          await merge?.dispose();
+          merge = null;
+          merge = await MergeSession.start(i);
+          return merge.state();
+        } finally {
+          mergeStarting = false;
+        }
+      }),
+    mergeState: () => wrap(async () => merge?.state() ?? null),
+    mergeConflictSides: (path) => wrap(() => activeMerge().conflictSides(str(path, 'chemin'))),
+    mergeResolve: (path, r) =>
+      wrap(async () => {
+        const m = activeMerge();
+        const p = str(path, 'chemin');
+        insideRoot(m.state().dir, p);
+        await m.resolve(p, mergeResolution(r));
+        return m.state();
+      }),
+    mergeCommit: (message) =>
+      wrap(async () => {
+        const m = activeMerge();
+        await m.commit(str(message, 'message', 100_000));
+        return m.state();
+      }),
+    mergePush: () =>
+      wrap(async () => {
+        const m = activeMerge();
+        const st = m.state();
+        await confirmPush(st.root, `origin/${st.targetLabel.replace(/^origin\//, '')}`);
+        await m.push();
+        return m.state();
+      }),
+    mergeFallbackPr: (r, title) =>
+      wrap(async () => {
+        const c = ctx(); // la PR exige une session Azure
+        const x = repoRef(r);
+        const m = activeMerge();
+        const st = m.state();
+        const slug = (s: string) => s.replace(/^origin\//, '').replace(/[^A-Za-z0-9._-]+/g, '-');
+        const target = st.targetLabel.replace(/^origin\//, '');
+        await assertOriginIs(st.root, x);
+        const name = `merge/${slug(st.sourceLabel)}-into-${slug(target)}-${Date.now().toString(36)}`;
+        await confirmPush(st.root, `origin/${name}`);
+        const branch = await m.pushAsBranch(name);
+        return createPr(c, x.project, x.repoId, x.repoName, { source: branch, target, title: str(title, 'titre', 400), description: '', workItemIds: [] });
+      }),
+    mergeAbort: () =>
+      wrap(async () => {
+        await merge?.abort();
+        merge = null;
+        return null;
+      }),
+    mergeClose: () =>
+      wrap(async () => {
+        if (merge && !mergeDone(merge) && merge.state().phase !== 'committed') throw fail('unknown', 'Le merge n’est pas terminé : validez le commit ou annulez.');
+        await merge?.dispose(); // un commit non poussé reste ancré dans refs/abd/merges/
+        merge = null;
+        return null;
+      }),
+    pushBranch: (root, branch, r) =>
+      wrap(async () => {
+        const dir = approvedRoot(root);
+        const b = str(branch, 'branche', 400);
+        await assertOriginIs(dir, repoRef(r));
+        await confirmPush(dir, `origin/${b}`);
+        await pushLocalBranch(dir, b);
+      }),
+    originCheck: (root, r) =>
+      wrap(async () => {
+        const x = repoRef(r);
+        const info = await repoInfo(approvedRoot(root));
+        return { matches: originMatches(info.originUrl, session?.orgUrl ?? '', x.project, x.repoName), originUrl: info.originUrl };
       }),
 
     openExternal: (url) =>

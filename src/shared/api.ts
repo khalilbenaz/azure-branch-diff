@@ -7,8 +7,12 @@ import type {
   NamedRef,
   PrSummary,
   Resolution,
+  LocalRepoInfo,
+  MergeResolution,
+  MergeStartInput,
+  MergeState,
   Result,
-  Source,
+  Side,
 } from './types';
 
 export interface LocalInfo {
@@ -18,8 +22,12 @@ export interface LocalInfo {
 }
 
 export interface CompareResult {
+  /** azure : deux branches Azure ; local : deux références du même clone ; mixed : Azure et local (têtes). */
+  kind?: 'azure' | 'local' | 'mixed';
   changes: ChangeEntry[];
+  /** Commit affiché à gauche (cible, ou ancêtre commun en mode PR). */
   baseCommit?: string;
+  /** Commit affiché à droite (source), ou WORKTREE pour une copie de travail. */
   sourceCommit?: string;
   targetCommit?: string;
   local?: LocalInfo | null;
@@ -48,8 +56,10 @@ export interface Api {
   repos(project: string): Promise<Result<NamedRef[]>>;
   branches(project: string, repoId: string): Promise<Result<string[]>>;
   pickFolder(): Promise<Result<string | null>>;
-  compare(source: Source, target: AzureSource, mode: 'mergeBase' | 'tips'): Promise<Result<CompareResult>>;
-  fileSides(source: Source, target: AzureSource, entry: ChangeEntry, cmp: CompareResult): Promise<Result<{ left: FileSide; right: FileSide }>>;
+  /** Approuve la racine git du dossier choisi et renvoie ses branches. */
+  localRepo(dir: string): Promise<Result<LocalRepoInfo>>;
+  compare(source: Side, target: Side, mode: 'mergeBase' | 'tips'): Promise<Result<CompareResult>>;
+  fileSides(source: Side, target: Side, entry: ChangeEntry, cmp: CompareResult): Promise<Result<{ left: FileSide; right: FileSide }>>;
   findPr(repo: RepoRef, source: string, target: string): Promise<Result<PrSummary | null>>;
   createPr(repo: RepoRef, input: NewPrInput): Promise<Result<PrSummary>>;
   getPr(repo: RepoRef, prId: number): Promise<Result<PrSummary>>;
@@ -62,6 +72,24 @@ export interface Api {
   conflictsUrl(repo: RepoRef, prId: number): Promise<Result<string>>;
   fileUrl(repo: RepoRef, path: string, branch: string): Promise<Result<string>>;
   openExternal(url: string): Promise<Result<void>>;
+
+  // Merge local (un seul à la fois).
+  mergeStart(input: MergeStartInput): Promise<Result<MergeState>>;
+  mergeState(): Promise<Result<MergeState | null>>;
+  /** merged : le fichier fusionné par git (marqueurs de conflit, parties sans conflit déjà fusionnées). */
+  mergeConflictSides(path: string): Promise<Result<{ base: FileSide; target: FileSide; source: FileSide; merged: FileSide }>>;
+  mergeResolve(path: string, r: MergeResolution): Promise<Result<MergeState>>;
+  mergeCommit(message: string): Promise<Result<MergeState>>;
+  mergePush(): Promise<Result<MergeState>>;
+  /** Quand la cible refuse le push : pousse le merge sur une branche dédiée et crée une PR vers la cible. */
+  mergeFallbackPr(repo: RepoRef, title: string): Promise<Result<PrSummary>>;
+  mergeAbort(): Promise<Result<null>>;
+  /** Termine une session (après commit / push) et supprime son worktree. */
+  mergeClose(): Promise<Result<null>>;
+  /** Pousse une branche locale vers origin (PR depuis une branche locale). */
+  pushBranch(root: string, branch: string, repo: RepoRef): Promise<Result<void>>;
+  /** Vérifie que l'origin du clone est bien le dépôt Azure choisi. */
+  originCheck(root: string, repo: RepoRef): Promise<Result<{ matches: boolean; originUrl: string | null }>>;
 }
 
 export const API_METHODS = [
@@ -72,6 +100,7 @@ export const API_METHODS = [
   'repos',
   'branches',
   'pickFolder',
+  'localRepo',
   'compare',
   'fileSides',
   'findPr',
@@ -85,4 +114,15 @@ export const API_METHODS = [
   'conflictsUrl',
   'fileUrl',
   'openExternal',
+  'mergeStart',
+  'mergeState',
+  'mergeConflictSides',
+  'mergeResolve',
+  'mergeCommit',
+  'mergePush',
+  'mergeFallbackPr',
+  'mergeAbort',
+  'mergeClose',
+  'pushBranch',
+  'originCheck',
 ] as const satisfies readonly (keyof Api)[];

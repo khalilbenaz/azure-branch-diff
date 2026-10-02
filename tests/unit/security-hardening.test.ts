@@ -12,7 +12,7 @@ import { compareLocalToAzure } from '../../src/main/compare/compareLocal';
 import { normalizeError } from '../../src/main/errors';
 import { isSafeExternalUrl } from '../../src/main/urls';
 import { blobSha } from '../../src/main/local/blobSha';
-import { tempDir, reverseCipher } from './helpers';
+import { tempDir, reverseCipher, gitDir, worktreeSide } from './helpers';
 
 const TARGET = { kind: 'azure' as const, project: 'Demo', repoId: 'repo1', branch: 'master' };
 
@@ -26,18 +26,18 @@ function setup(picked: string | null) {
 }
 
 test('M1: un dossier local non choisi via la boîte de dialogue est refusé', async () => {
-  const chosen = tempDir({ 'a.cs': 'x' });
-  const other = tempDir({ 'secret.txt': 'secret' });
+  const chosen = gitDir({ 'a.cs': 'x' });
+  const other = gitDir({ 'secret.txt': 'secret' });
   const api = setup(chosen);
   await api.login('https://dev.azure.com/X', 'pat');
-  const before = await api.compare({ kind: 'local', path: chosen }, TARGET, 'tips');
+  const before = await api.compare(worktreeSide(chosen), TARGET, 'tips');
   expect(before.ok).toBe(false);
   await api.pickFolder();
-  expect((await api.compare({ kind: 'local', path: chosen }, TARGET, 'tips')).ok).toBe(true);
-  const r = await api.fileSides({ kind: 'local', path: other }, TARGET, { path: 'secret.txt', change: 'add', isBinary: false }, { changes: [] });
+  expect((await api.compare(worktreeSide(chosen), TARGET, 'tips')).ok).toBe(true);
+  const r = await api.fileSides(worktreeSide(other), TARGET, { path: 'secret.txt', change: 'add', isBinary: false }, { changes: [] });
   expect(r.ok).toBe(false);
   expect(JSON.stringify(r)).not.toContain('secret');
-  expect((await api.compare({ kind: 'local', path: '/' }, TARGET, 'tips')).ok).toBe(false);
+  expect((await api.compare({ kind: 'local', root: '/', ref: { type: 'worktree' } }, TARGET, 'tips')).ok).toBe(false);
 });
 
 test('M1: les arguments IPC de mauvais type sont refusés proprement', async () => {

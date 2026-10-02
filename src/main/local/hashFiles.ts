@@ -2,12 +2,12 @@ import { lstat, readFile, readlink } from 'node:fs/promises';
 import { spawn } from 'node:child_process';
 import { join } from 'node:path';
 import { blobSha } from './blobSha';
-import { autocrlf, hasLocalFilters, insideGitRepo, safeGitArgs } from './safeGit';
+import { autocrlf, GIT_ENV, hasLocalFilters, insideGitRepo, safeGitArgs } from './safeGit';
 
 /** `git hash-object --stdin-paths` : chemins sur l'entrée standard, pas de limite de ligne de commande, pas de shell. */
 function gitHashPaths(root: string, paths: string[]): Promise<string[]> {
   return new Promise((resolvePromise, reject) => {
-    const child = spawn('git', safeGitArgs(['hash-object', '--stdin-paths']), { cwd: root, windowsHide: true });
+    const child = spawn('git', safeGitArgs(['hash-object', '--stdin-paths']), { cwd: root, windowsHide: true, env: { ...process.env, ...GIT_ENV } });
     let out = '';
     let err = '';
     child.stdout.on('data', (d: Buffer) => (out += d.toString()));

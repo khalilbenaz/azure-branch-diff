@@ -55,3 +55,16 @@ export const IconExternal = () => (
     <path d="M14 4h6v6M20 4l-9 9M18 14v5a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1V7a1 1 0 0 1 1-1h5" />
   </svg>
 );
+export const IconFolder = () => (
+  <svg width="16" height="16" viewBox="0 0 24 24" {...base} aria-hidden="true">
+    <path d="M3 7a2 2 0 0 1 2-2h4l2 2h8a2 2 0 0 1 2 2v8a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z" />
+  </svg>
+);
+export const IconMerge = ({ size = 18 }: { size?: number }) => (
+  <svg width={size} height={size} viewBox="0 0 24 24" {...base} aria-hidden="true">
+    <circle cx="6" cy="5" r="2.2" />
+    <circle cx="18" cy="5" r="2.2" />
+    <circle cx="12" cy="19" r="2.2" />
+    <path d="M6 7.2c0 5 6 5 6 9.6M18 7.2c0 5-6 5-6 9.6" />
+  </svg>
+);

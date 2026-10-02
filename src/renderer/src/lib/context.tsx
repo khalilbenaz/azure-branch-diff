@@ -1,8 +1,8 @@
 import { createContext, useContext } from 'react';
 import type { RepoRef } from '../../../shared/api';
-import type { ApiError, PrSummary } from '../../../shared/types';
+import type { ApiError, LocalRepoInfo, MergeState, PrSummary } from '../../../shared/types';
 
-export type Tab = 'compare' | 'pr' | 'conflicts';
+export type Tab = 'compare' | 'pr' | 'conflicts' | 'merge';
 
 export interface Selection {
   repo: RepoRef;
@@ -17,6 +17,15 @@ export interface AppState {
   /** Dépôt choisi dans la barre latérale. */
   repo: RepoRef | null;
   setRepo(r: RepoRef | null): void;
+  /** Clone local choisi dans la barre latérale (partagé par les côtés locaux et le merge). */
+  clone: LocalRepoInfo | null;
+  /** Ouvre la boîte de dialogue de choix du clone ; renvoie le clone choisi. */
+  pickClone(): Promise<LocalRepoInfo | null>;
+  /** Relit les branches du clone (après un merge, un push…). */
+  refreshClone(): Promise<void>;
+  /** Merge local en cours (onglet Merge). */
+  merge: MergeState | null;
+  setMerge(m: MergeState | null): void;
   selection: Selection | null;
   setSelection(s: Selection | null): void;
   pr: PrSummary | null;

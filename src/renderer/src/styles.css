@@ -203,12 +203,28 @@ label.check input { height: auto; }
 .main { flex: 1; min-width: 0; display: flex; flex-direction: column; }
 .page { flex: 1; min-height: 0; display: flex; flex-direction: column; }
 
+/* Clone local (barre latérale) */
+.side-clone { display: flex; flex-direction: column; gap: 4px; font-size: 11px; font-weight: 500; letter-spacing: 0.06em; text-transform: uppercase; color: var(--side-muted); }
+.side-clone button { font: inherit; font-size: 13px; text-transform: none; letter-spacing: 0; color: #ffffff; background: var(--side-2); border: 1px solid var(--side-line); border-radius: 8px; padding: 0 10px; height: 40px; display: flex; align-items: center; gap: 8px; text-align: left; cursor: pointer; }
+.side-clone button svg { color: var(--side-muted); flex-shrink: 0; }
+.side-clone .name { flex: 1; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.side-clone .hint { font-size: 11px; color: var(--side-muted); }
+
 /* Barre d'outils */
 .toolbar { display: flex; align-items: center; gap: 10px; padding: 12px 20px; background: var(--panel); border-bottom: 1px solid var(--line); flex-wrap: wrap; }
 .toolbar label { flex-direction: row; align-items: center; gap: 8px; font-size: 12px; font-weight: 500; color: var(--muted); }
-.toolbar select.branch { font-family: var(--mono); font-size: 13px; width: clamp(130px, 11vw, 260px); }
+.toolbar select.branch { font-family: var(--mono); font-size: 13px; }
 .toolbar .folder { display: flex; gap: 6px; align-items: center; min-width: 0; }
 .toolbar .folder input { font-family: var(--mono); font-size: 12.5px; width: 260px; }
+.toolbar.sides { align-items: stretch; flex-wrap: nowrap; }
+.side-card { flex: 1 1 0; min-width: 0; display: flex; flex-direction: column; gap: 6px; padding: 8px 10px; border: 1px solid var(--line); border-radius: 10px; background: var(--panel-2); }
+.side-card-head { display: flex; align-items: center; gap: 8px; }
+.side-card-head .eyebrow { font-weight: 600; }
+.side-card select.branch { width: 100%; }
+.segmented.xs { height: 28px; border-radius: 7px; }
+.segmented.xs button { font-size: 12px; padding: 0 10px; }
+.toolbar .swap { align-self: center; }
+.toolbar-actions { display: flex; align-items: flex-end; gap: 8px; flex-wrap: wrap; justify-content: flex-end; }
 .toolbar-note { padding: 6px 20px; font-size: 12.5px; color: var(--muted); background: var(--panel); border-bottom: 1px solid var(--line-soft); }
 
 /* Comparer */
@@ -277,6 +293,13 @@ label.check input { height: auto; }
 .dot { width: 8px; height: 8px; border-radius: 4px; flex-shrink: 0; }
 .pane.result { flex: 1; min-height: 220px; border-color: var(--accent); box-shadow: 0 0 0 3px var(--focus); }
 .resolver-foot { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+
+/* Merge local */
+.link-row { all: unset; display: flex; flex-direction: column; gap: 6px; cursor: pointer; width: 100%; }
+.link-row:disabled { cursor: default; }
+.link-row:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+.commit-panel { background: var(--panel); border: 1px solid var(--line); border-radius: 10px; padding: 12px; display: flex; align-items: flex-end; gap: 10px; flex-wrap: wrap; margin-top: auto; }
+.commit-panel label { flex: 1; min-width: 260px; }
 
 /* Mise à jour */
 .update { border-radius: 0; gap: 12px; padding: 8px 20px; }

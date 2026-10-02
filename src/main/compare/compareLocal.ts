@@ -25,6 +25,20 @@ async function sniff(file: string): Promise<{ isBinary: boolean; sizeBytes: numb
   }
 }
 
+/** Compare deux arbres (chemin → SHA blob) : gauche = cible, droite = source. */
+export function compareTrees(left: RemoteItem[], right: RemoteItem[]): ChangeEntry[] {
+  const l = new Map(left.map((i) => [i.path, i.objectId]));
+  const r = new Map(right.map((i) => [i.path, i.objectId]));
+  const out: ChangeEntry[] = [];
+  for (const [path, sha] of r) {
+    const before = l.get(path);
+    if (before === undefined) out.push({ path, change: 'add', isBinary: false });
+    else if (before !== sha) out.push({ path, change: 'edit', isBinary: false });
+  }
+  for (const path of l.keys()) if (!r.has(path)) out.push({ path, change: 'delete', isBinary: false });
+  return out.sort((a, b) => a.path.localeCompare(b.path));
+}
+
 /** Compare un dossier local à l'arbre d'une branche Azure, par SHA blob (sans télécharger les fichiers inchangés). */
 export async function compareLocalToAzure(root: string, remote: RemoteItem[]): Promise<ChangeEntry[]> {
   const remoteSha = new Map(remote.map((r) => [r.path, r.objectId]));

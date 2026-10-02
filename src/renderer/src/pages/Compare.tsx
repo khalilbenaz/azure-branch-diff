@@ -1,14 +1,17 @@
 import { useEffect, useRef, useState } from 'react';
 import type { CompareResult } from '../../../shared/api';
-import type { ApiError, ChangeEntry, FileSide } from '../../../shared/types';
+import type { ApiError, ChangeEntry, FileSide, Side } from '../../../shared/types';
 import { api, asApiError, call } from '../lib/api';
 import { countLines } from '../lib/eol';
 import { azureFileBranch } from '../lib/prLogic';
+import { mergeInput, sideLabel } from '../lib/sides';
 import { useApp } from '../lib/context';
 import { ErrorBanner } from '../components/ErrorBanner';
 import { SourcePicker, type PickerValue } from '../components/SourcePicker';
 import { FileTree, type LineCounts } from '../components/FileTree';
 import { DiffView } from '../components/DiffView';
+
+const badge = (s: Side) => (s.kind === 'azure' ? 'Azure' : 'Local');
 
 export function Compare() {
   const app = useApp();
@@ -18,10 +21,7 @@ export function Compare() {
   const [result, setResult] = useState<CompareResult | null>(null);
   const [counts, setCounts] = useState<LineCounts>({});
   const [entry, setEntry] = useState<ChangeEntry | null>(null);
-  const [sides, setSides] = useState<{
-    left: FileSide;
-    right: FileSide;
-  } | null>(null);
+  const [sides, setSides] = useState<{ left: FileSide; right: FileSide } | null>(null);
   const [loadingFile, setLoadingFile] = useState(false);
   const [sideBySide, setSideBySide] = useState(true);
   const lastRun = useRef<() => void>(() => {});
@@ -33,6 +33,12 @@ export function Compare() {
     if (!app.handleAuth(err)) setError(err);
   };
 
+  /** Sélection de l'onglet PR (branches Azure source → cible). */
+  function selectForPr(v: PickerValue, sourceBranch: string) {
+    if (v.target.kind !== 'azure' || !app.repo) return;
+    app.setSelection({ repo: app.repo, source: sourceBranch, target: v.target.branch, nonce: ++compareCount.current });
+  }
+
   async function runCompare(v: PickerValue) {
     lastRun.current = () => void runCompare(v);
     fileReq.current++; // ignore un diff de fichier encore en cours sur l'ancien résultat
@@ -42,26 +48,63 @@ export function Compare() {
     setEntry(null);
     setSides(null);
     setCounts({});
-    // La sélection de l'onglet PR suit la comparaison lancée, même si celle-ci échoue.
-    // La PR en cours est gardée : l'onglet PR l'écarte si les branches ont changé.
+    // La sélection de l'onglet PR suit la comparaison lancée ; une comparaison avec un côté local n'a pas de PR.
     app.setSelection(null);
-    if (v.source.kind === 'local') app.setPr(null);
+    if (v.source.kind === 'local' || v.target.kind === 'local') app.setPr(null);
     try {
       const r = await call(api.compare(v.source, v.target, v.mode));
       setPicked(v);
       setResult(r);
-      if (v.source.kind === 'azure') {
-        app.setSelection({
-          repo: {
-            project: v.target.project,
-            repoId: v.target.repoId,
-            repoName: v.repoName,
-          },
-          source: v.source.branch,
-          target: v.target.branch,
-          nonce: ++compareCount.current,
-        });
+      if (v.source.kind === 'azure' && v.target.kind === 'azure') selectForPr(v, v.source.branch);
+    } catch (e) {
+      report(e);
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  async function openPr(v: PickerValue) {
+    if (v.target.kind !== 'azure') return;
+    try {
+      if (v.source.kind === 'local') {
+        if (v.source.ref.type !== 'branch' || !app.clone) return;
+        const branch = v.source.ref.name;
+        if (!app.repo) return;
+        // Confirmation native (processus principal) avant le push.
+        await call(api.pushBranch(app.clone.root, branch, app.repo));
+        await app.refreshClone();
+        selectForPr(v, branch);
+      } else selectForPr(v, v.source.branch);
+      app.goTo('pr');
+    } catch (e) {
+      report(e);
+    }
+  }
+
+  async function startMerge(v: PickerValue) {
+    let clone = app.clone;
+    if (!clone) clone = await app.pickClone();
+    if (!clone) return;
+    const m = mergeInput(v.source, v.target, clone);
+    if ('reason' in m) {
+      setError({ code: 'unknown', message: m.reason });
+      return;
+    }
+    try {
+      if ((v.source.kind === 'azure' || v.target.kind === 'azure') && app.repo) {
+        const check = await call(api.originCheck(clone.root, app.repo));
+        if (
+          !check.matches &&
+          !window.confirm(`L’origin du clone (${check.originUrl ?? 'aucun'}) ne semble pas être le dépôt Azure « ${app.repo.repoName} ». Continuer ?`)
+        )
+          return;
       }
+      const label = `${sideLabel(v.source, clone)} → ${sideLabel(v.target, clone, 'cible')}`;
+      const then = m.input.target.kind === 'remote' ? `, puis pousser le résultat vers origin/${m.input.target.branch}` : '';
+      if (!window.confirm(`Fusionner ${label} dans un worktree temporaire du clone${then} ?`)) return;
+      setBusy(true);
+      app.setMerge(await call(api.mergeStart(m.input)));
+      app.goTo('merge');
     } catch (e) {
       report(e);
     } finally {
@@ -80,10 +123,7 @@ export function Compare() {
       if (req !== fileReq.current) return;
       setSides(s);
       if (!s.left.isBinary && !s.right.isBinary && !s.left.tooLarge && !s.right.tooLarge) {
-        setCounts((c) => ({
-          ...c,
-          [e.path]: countLines(s.left.content, s.right.content),
-        }));
+        setCounts((c) => ({ ...c, [e.path]: countLines(s.left.content, s.right.content) }));
       }
     } catch (err) {
       if (req === fileReq.current) report(err);
@@ -93,28 +133,18 @@ export function Compare() {
   }
 
   async function openInAzure() {
-    if (!picked || !entry) return;
+    if (!picked || !entry || !app.repo) return;
     const branch = azureFileBranch(entry, picked.source, picked.target);
     if (!branch) return;
     try {
-      const url = await call(
-        api.fileUrl(
-          {
-            project: picked.target.project,
-            repoId: picked.target.repoId,
-            repoName: picked.repoName,
-          },
-          entry.path,
-          branch,
-        ),
-      );
+      const url = await call(api.fileUrl(app.repo, entry.path, branch));
       await call(api.openExternal(url));
     } catch (e) {
       report(e);
     }
   }
 
-  // Un autre dépôt choisi dans la barre latérale : l'ancien résultat n'a plus de sens.
+  // Un autre dépôt Azure ou un autre clone : l'ancien résultat n'a plus de sens.
   useEffect(() => {
     fileReq.current++;
     setPicked(null);
@@ -122,34 +152,20 @@ export function Compare() {
     setEntry(null);
     setSides(null);
     setCounts({});
-  }, [app.repo?.repoId]);
+  }, [app.repo?.repoId, app.clone?.root]);
 
-  const isLocal = picked?.source.kind === 'local';
-  const leftLabel = picked
-    ? isLocal
-      ? picked.target.branch
-      : picked.mode === 'mergeBase'
-        ? `${picked.target.branch} · ancêtre commun`
-        : picked.target.branch
-    : '';
-  const rightLabel = picked ? (picked.source.kind === 'local' ? 'dossier local' : picked.source.branch) : '';
-  const prAction = result && picked && !isLocal && result.changes.length ? () => app.goTo('pr') : undefined;
-  const step = !app.repo ? 1 : 2;
+  const label = (s: Side, base?: boolean) =>
+    `${badge(s)} · ${sideLabel(s, app.clone, base ? 'cible' : 'source')}${base && picked?.mode === 'mergeBase' && result?.kind !== 'mixed' ? ' · ancêtre commun' : ''}`;
+  const leftLabel = picked ? label(picked.target, true) : '';
+  const rightLabel = picked ? label(picked.source) : '';
+  const step = !app.repo && !app.clone ? 1 : 2;
 
   return (
     <div className="page">
-      <SourcePicker busy={busy} onCompare={runCompare} onError={report} prAction={prAction} />
+      <SourcePicker busy={busy} onCompare={runCompare} onError={report} onPr={openPr} onMerge={startMerge} />
       {error && (
         <div className="pad" style={{ paddingBottom: 0 }}>
           <ErrorBanner error={error} onRetry={() => lastRun.current()} onClose={() => setError(null)} />
-        </div>
-      )}
-      {result && picked && isLocal && (
-        <div className="toolbar-note">
-          {result.local
-            ? `Dépôt local : ${result.local.branch} · ${result.local.commit.slice(0, 8)} · ${result.local.subject}`
-            : 'Dossier hors git : comparaison fichier par fichier.'}{' '}
-          · Lecture seule (pas de PR depuis un dossier local).
         </div>
       )}
       {result && picked ? (
@@ -173,24 +189,25 @@ export function Compare() {
             <div className="stack" style={{ gap: 8 }}>
               <h1>{busy ? 'Comparaison en cours…' : 'Que voulez-vous comparer ?'}</h1>
               <p className="muted" style={{ fontSize: 15 }}>
-                Choisissez un dépôt dans la barre latérale, puis deux branches, ou une branche et un dossier de votre disque.
+                Chaque côté est une branche Azure ou une référence de votre clone local : comparez, créez la PR ou fusionnez dans toutes les
+                directions.
               </p>
             </div>
             <div className="steps">
               <div className={step === 1 ? 'step current' : 'step done'}>
                 <span className="n">ÉTAPE 1{step > 1 ? ' · fait' : ''}</span>
-                <h3>Choisir le dépôt</h3>
-                <span className="muted">Projet et dépôt, dans la barre latérale.</span>
+                <h3>Dépôt Azure et / ou clone</h3>
+                <span className="muted">Dans la barre latérale : le dépôt Azure, le clone local, ou les deux.</span>
               </div>
               <div className={step === 2 ? 'step current' : 'step'}>
                 <span className="n">ÉTAPE 2</span>
                 <h3>Source et cible</h3>
-                <span className="muted">Deux branches, ou un dossier local face à une branche.</span>
+                <span className="muted">Pour chaque côté : Azure ou Local, puis la branche.</span>
               </div>
               <div className="step">
                 <span className="n">ÉTAPE 3</span>
-                <h3>Comparer, puis la PR</h3>
-                <span className="muted">Diff fichier par fichier, puis PR et conflits dans la foulée.</span>
+                <h3>Comparer, PR ou Fusionner</h3>
+                <span className="muted">Diff fichier par fichier, PR Azure, ou merge local avec conflits.</span>
               </div>
             </div>
           </div>

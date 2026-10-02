@@ -1,5 +1,6 @@
 import { test, expect, _electron as electron, type ElectronApplication, type Page } from '@playwright/test';
-import { mkdtempSync, mkdirSync, writeFileSync } from 'node:fs';
+import { mkdtempSync, mkdirSync, realpathSync, writeFileSync } from 'node:fs';
+import { execFileSync } from 'node:child_process';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 
@@ -83,15 +84,16 @@ test('comparaison avec un dossier local', async () => {
   mkdirSync(join(dir, 'src'));
   writeFileSync(join(dir, 'src/Service.cs'), 'local\n');
   writeFileSync(join(dir, 'old.sql'), 'select 1;\n');
+  execFileSync('git', ['init', '-q'], { cwd: dir });
   await app.evaluate(({ dialog }, folder) => {
     dialog.showOpenDialog = async () => ({ canceled: false, filePaths: [folder] });
   }, dir);
   await page.getByRole('tab', { name: 'Comparer' }).click();
-  await page.getByRole('button', { name: 'Dossier local' }).click();
-  await page.getByRole('button', { name: 'Choisir…' }).click();
-  await expect(page.getByLabel('Dossier local')).toHaveValue(dir);
+  await page.getByRole('button', { name: 'Clone local' }).click();
+  await expect(page.getByRole('button', { name: 'Clone local' })).toContainText(realpathSync(dir).split('/').pop()!);
+  await page.getByRole('group', { name: 'Type de source' }).getByRole('button', { name: 'Local' }).click();
+  await page.getByLabel('Référence source').selectOption('worktree');
   await page.getByRole('button', { name: 'Comparer', exact: true }).click();
-  await expect(page.getByText('Dossier hors git')).toBeVisible();
   await page.getByRole('button', { name: /Service\.cs/ }).click();
   await expect(page.locator('.monaco-diff-editor')).toBeVisible();
   await shot('06-local');
