@@ -9,11 +9,11 @@ const STALE_MS = 10 * 60_000;
 /** Dossier de merge créé par l'app : directement dans le dossier temporaire, préfixe connu, pas un lien, à l'utilisateur courant. */
 function isOurTmpDir(path: string): boolean {
   try {
-    const tmp = realpathSync(tmpdir());
+    const tmp = realpathSync.native(tmpdir());
     const st = lstatSync(path);
     if (st.isSymbolicLink() || !st.isDirectory()) return false;
     if (typeof process.getuid === 'function' && st.uid !== process.getuid()) return false;
-    const real = realpathSync(path);
+    const real = realpathSync.native(path);
     return dirname(real) === tmp && real.slice(tmp.length + 1).startsWith(TMP_PREFIX);
   } catch {
     return false;

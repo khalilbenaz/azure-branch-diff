@@ -29,4 +29,4 @@ export function gitDir(files: Record<string, string | Buffer> = {}): string {
 }
 
 /** Côté local « copie de travail » d'un dossier. */
-export const worktreeSide = (root: string) => ({ kind: 'local' as const, root: realpathSync(root), ref: { type: 'worktree' as const } });
+export const worktreeSide = (root: string) => ({ kind: 'local' as const, root: realpathSync.native(root), ref: { type: 'worktree' as const } });

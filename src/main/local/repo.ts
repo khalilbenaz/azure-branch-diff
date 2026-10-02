@@ -10,7 +10,7 @@ const fail = (message: string): ApiError => ({ code: 'unknown', message });
 /** Racine réelle du dépôt git contenant `dir`. */
 export async function repoRoot(dir: string): Promise<string> {
   try {
-    return realpathSync((await gitOutput(dir, ['rev-parse', '--show-toplevel'])).trim());
+    return realpathSync.native((await gitOutput(dir, ['rev-parse', '--show-toplevel'])).trim());
   } catch {
     throw fail('Ce dossier n’est pas un dépôt git (ou git n’est pas installé).');
   }

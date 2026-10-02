@@ -1,5 +1,6 @@
 import { test, expect } from 'vitest';
 import { existsSync, mkdirSync, realpathSync, symlinkSync } from 'node:fs';
+import { execSync } from 'node:child_process';
 import { join } from 'node:path';
 import { assertSafeRepo } from '../../src/main/merge/safety';
 import { MergeSession } from '../../src/main/merge/session';
@@ -147,7 +148,7 @@ test('L3 : le push exige une confirmation native', async () => {
   const api = handlers(clone, async () => false);
   await api.login('https://dev.azure.com/X', 'pat');
   await api.pickFolder();
-  const root = realpathSync(clone);
+  const root = realpathSync.native(clone);
   expect((await api.localRepo(root)).ok).toBe(true);
   const r = await api.pushBranch(root, 'mine', { project: 'Demo', repoId: 'repo1', repoName: 'Gateway' });
   restore();
@@ -159,4 +160,15 @@ test('L5 : lecture interdite dans .git', async () => {
   const { clone } = makeOrigin();
   await refused(localFileSide(clone, WORKTREE, '.git/config'));
   await refused(localFileSide(clone, WORKTREE, 'src/../.git/config'));
+});
+
+test('Windows : un clone ouvert par son chemin court (8.3, ex. RUNNER~1) est bien reconnu comme racine', async () => {
+  if (process.platform !== 'win32') return;
+  const { clone } = makeOrigin();
+  const short = execSync(`cmd /c for %I in ("${clone}") do @echo %~sI`, { encoding: 'utf8' }).trim();
+  const api = handlers(short);
+  await api.login('https://dev.azure.com/X', 'pat');
+  await api.pickFolder();
+  const r = await api.localRepo(short);
+  expect(r.ok).toBe(true);
 });

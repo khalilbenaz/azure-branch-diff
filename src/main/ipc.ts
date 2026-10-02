@@ -68,7 +68,7 @@ export function createHandlers(deps: HandlerDeps): Api {
     const p = str(v, 'dossier');
     let real: string;
     try {
-      real = realpathSync(p);
+      real = realpathSync.native(p);
     } catch {
       throw fail('unknown', 'Dossier introuvable.');
     }
@@ -228,7 +228,7 @@ export function createHandlers(deps: HandlerDeps): Api {
     pickFolder: () =>
       wrap(async () => {
         const p = await deps.pickFolder();
-        if (p) approvedRoots.add(realpathSync(p));
+        if (p) approvedRoots.add(realpathSync.native(p));
         return p;
       }),
 

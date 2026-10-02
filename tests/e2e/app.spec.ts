@@ -90,7 +90,7 @@ test('comparaison avec un dossier local', async () => {
   }, dir);
   await page.getByRole('tab', { name: 'Comparer' }).click();
   await page.getByRole('button', { name: 'Clone local' }).click();
-  await expect(page.getByRole('button', { name: 'Clone local' })).toContainText(realpathSync(dir).split('/').pop()!);
+  await expect(page.getByRole('button', { name: 'Clone local' })).toContainText(realpathSync.native(dir).split('/').pop()!);
   await page.getByRole('group', { name: 'Type de source' }).getByRole('button', { name: 'Local' }).click();
   await page.getByLabel('Référence source').selectOption('worktree');
   await page.getByRole('button', { name: 'Comparer', exact: true }).click();
