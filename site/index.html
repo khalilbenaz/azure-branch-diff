@@ -85,18 +85,19 @@
         </div>
         <p class="meta" id="meta">macOS (Apple Silicon et Intel) · Windows 64 bits · gratuit, open source (MIT)</p>
       </div>
-      <img class="shot" src="img/02-diff.webp" width="1400" height="900" alt="Diff côte à côte entre deux branches, avec la liste des fichiers modifiés" />
+      <img class="shot" src="img/02-diff.webp" width="1400" height="900" alt="Diff côte à côte : la cible à gauche, la source à droite, avec la liste des fichiers modifiés" />
     </div>
 
     <section id="fonctions">
       <h2>Ce que fait l'app</h2>
       <div class="grid">
-        <div class="card"><h3>Diff entre branches</h3><p>Comme une PR (depuis l'ancêtre commun) ou tête contre tête. L'éditeur de VS Code, côte à côte ou unifié, avec coloration C#, SQL, XML, JSON…</p></div>
-        <div class="card"><h3>Branche ↔ dossier local</h3><p>Vos modifications non commitées comparées à la branche distante. Respecte <code>.gitignore</code> et <code>core.autocrlf</code> : pas de faux positifs CRLF/LF.</p></div>
+        <div class="card"><h3>Diff entre branches</h3><p>Ce qui est à gauche s'affiche à gauche : la cible à gauche, la source à droite. Comme une PR (depuis l'ancêtre commun) ou tête contre tête, avec l'éditeur de VS Code.</p></div>
+        <div class="card"><h3>Azure ou local, de chaque côté</h3><p>Branche Azure, branche du clone, <code>origin/*</code>, copie de travail ou simple dossier téléchargé. Respecte <code>.gitignore</code> et <code>core.autocrlf</code>.</p></div>
         <div class="card"><h3>Pull Request en un clic</h3><p>Reprend la PR active si elle existe, lie les work items, attend le calcul du merge, puis complète (merge, squash, rebase).</p></div>
         <div class="card"><h3>Conflits : vous choisissez</h3><p>Réglez-les dans Azure, ou dans l'app : source, cible et résultat modifiable, « garder source / cible / les deux ».</p></div>
         <div class="card"><h3>Rapide sur les gros dépôts</h3><p>Aucun clone : seuls les fichiers modifiés sont téléchargés. Des milliers de fichiers modifiés restent fluides à parcourir et à filtrer.</p></div>
         <div class="card"><h3>Merge local, dans tous les sens</h3><p>Azure ou local, de chaque côté : merge dans un worktree temporaire, conflits réglés dans l'app, commit et push. Votre copie de travail reste intacte.</p></div>
+        <div class="card"><h3>Plusieurs organisations</h3><p>Un jeton par organisation ou un jeton multi-organisations : « Découvrir mes organisations », puis bascule d'un clic dans la barre latérale.</p></div>
         <div class="card"><h3>Mises à jour automatiques</h3><p>Sous Windows, la nouvelle version s'installe au redémarrage. Sous macOS, l'app vous prévient et télécharge le nouvel installeur.</p></div>
       </div>
     </section>
@@ -104,10 +105,11 @@
     <section>
       <h2>Aperçu</h2>
       <div class="gallery">
-        <figure><img class="shot" src="img/06-local.webp" width="1400" height="900" loading="lazy" alt="Comparaison d'un dossier local avec une branche Azure" /><figcaption>Dossier local comparé à la branche cible.</figcaption></figure>
+        <figure><img class="shot" src="img/06-local.webp" width="1400" height="900" loading="lazy" alt="Comparaison d'un dossier local avec une branche Azure" /><figcaption>Branche Azure (cible) ← dossier local (source).</figcaption></figure>
         <figure><img class="shot" src="img/04-conflicts.webp" width="1400" height="900" loading="lazy" alt="Liste des conflits d'une Pull Request" /><figcaption>Conflits de la PR : Azure ou l'app, au choix.</figcaption></figure>
-        <figure><img class="shot" src="img/05-resolver.webp" width="1400" height="900" loading="lazy" alt="Éditeur de résolution de conflit à trois volets" /><figcaption>Résolution : source, cible, résultat modifiable.</figcaption></figure>
+        <figure><img class="shot" src="img/05-resolver.webp" width="1400" height="900" loading="lazy" alt="Éditeur de résolution de conflit à trois volets" /><figcaption>Résolution : cible, source, résultat modifiable.</figcaption></figure>
         <figure><img class="shot" src="img/07-merge.webp" width="1400" height="900" loading="lazy" alt="Merge local : conflits résolus, message de commit" /><figcaption>Merge local : conflits, commit, push.</figcaption></figure>
+        <figure><img class="shot" src="img/08-orgs.webp" width="1400" height="900" loading="lazy" alt="Écran de connexion avec plusieurs organisations enregistrées" /><figcaption>Plusieurs organisations, un ou plusieurs jetons.</figcaption></figure>
       </div>
     </section>
 
