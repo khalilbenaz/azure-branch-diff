@@ -1,0 +1,47 @@
+appId: com.khalilbenaz.azurebranchdiff
+productName: Azure Branch Diff
+copyright: Copyright © 2026 Khalil Benazzouz
+directories:
+  output: release
+  buildResources: build
+files:
+  - out/**
+  - package.json
+asar: true
+# Fuses Electron : ferment les portes d'entrée (exécution comme Node, NODE_OPTIONS, --inspect, code hors asar).
+electronFuses:
+  runAsNode: false
+  enableNodeOptionsEnvironmentVariable: false
+  enableNodeCliInspectArguments: false
+  onlyLoadAppFromAsar: true
+  enableCookieEncryption: true
+# Releases GitHub : source des mises à jour automatiques (latest.yml / latest-mac.yml).
+publish:
+  provider: github
+  owner: khalilbenaz
+  repo: azure-branch-diff
+  releaseType: release
+mac:
+  target:
+    - target: dmg
+      arch: [arm64, x64]
+    # Le zip sert au mécanisme de mise à jour (latest-mac.yml).
+    - target: zip
+      arch: [arm64, x64]
+  category: public.app-category.developer-tools
+  # Signature ad hoc : pas de certificat Developer ID. hardenedRuntime exige une vraie signature.
+  identity: "-"
+  hardenedRuntime: false
+  icon: build/icon.png
+  # Noms stables : la page de téléchargement pointe vers releases/latest/download/<nom>.
+  artifactName: Azure-Branch-Diff-mac-${arch}.${ext}
+win:
+  target:
+    - target: nsis
+      arch: [x64]
+  icon: build/icon.png
+nsis:
+  oneClick: false
+  perMachine: false
+  allowToChangeInstallationDirectory: true
+  artifactName: Azure-Branch-Diff-Setup.${ext}
