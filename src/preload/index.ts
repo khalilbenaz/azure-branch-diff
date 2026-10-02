@@ -17,3 +17,8 @@ contextBridge.exposeInMainWorld('updates', {
     return () => ipcRenderer.removeListener('update:state', listener);
   },
 });
+
+contextBridge.exposeInMainWorld('theme', {
+  get: (): Promise<'system' | 'light' | 'dark'> => ipcRenderer.invoke('theme:get'),
+  set: (t: 'system' | 'light' | 'dark'): Promise<'system' | 'light' | 'dark'> => ipcRenderer.invoke('theme:set', t),
+});

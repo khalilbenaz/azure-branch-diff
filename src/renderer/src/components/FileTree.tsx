@@ -46,6 +46,18 @@ export function FileTree({ changes, counts, selected, onSelect }: Props) {
   const key = [changes, deferredQuery, ext];
   const sameKey = paging.key.length === key.length && paging.key.every((k, i) => k === key[i]);
   const limit = sameKey ? paging.limit : CHUNK;
+  // Dossiers repliés, réinitialisés quand la liste des changements change.
+  const [folded, setFolded] = useState<{ changes: ChangeEntry[]; dirs: Set<string> }>({
+    changes,
+    dirs: new Set(),
+  });
+  const collapsed = folded.changes === changes ? folded.dirs : new Set<string>();
+  const toggleDir = (dir: string) => {
+    const next = new Set(collapsed);
+    if (next.has(dir)) next.delete(dir);
+    else next.add(dir);
+    setFolded({ changes, dirs: next });
+  };
 
   const extensions = useMemo(() => [...new Set(changes.map((c) => extOf(c.path)).filter(Boolean))].sort(), [changes]);
 
@@ -74,6 +86,9 @@ export function FileTree({ changes, counts, selected, onSelect }: Props) {
     }
     return { added, removed };
   }, [counts]);
+
+  const allFolded = groups.dirs.length > 0 && groups.dirs.every(([d]) => collapsed.has(d));
+  const foldAll = () => setFolded({ changes, dirs: allFolded ? new Set() : new Set(groups.dirs.map(([d]) => d)) });
 
   const summary = useMemo(() => {
     const s = { add: 0, edit: 0, delete: 0, rename: 0 };
@@ -111,7 +126,7 @@ export function FileTree({ changes, counts, selected, onSelect }: Props) {
             ))}
           </select>
         </div>
-        <div className="row" style={{ gap: 6 }}>
+        <div className="row tree-chips">
           {summary.add > 0 && (
             <span className="chip chip-add">
               {summary.add} ajouté{summary.add > 1 ? 's' : ''}
@@ -132,38 +147,60 @@ export function FileTree({ changes, counts, selected, onSelect }: Props) {
               {summary.rename} renommé{summary.rename > 1 ? 's' : ''}
             </span>
           )}
+          {groups.dirs.length > 1 && (
+            <button type="button" className="tree-foldall" onClick={foldAll}>
+              {allFolded ? 'Tout déplier' : 'Tout replier'}
+            </button>
+          )}
         </div>
       </div>
       <ul className="tree-list">
-        {groups.dirs.map(([dir, entries]) => (
-          <li key={dir || '/'}>
-            <div className="tree-dir">{dir || '/'}</div>
-            <ul>
-              {entries.map((c) => {
-                const n = counts[c.path];
-                return (
-                  <li key={c.path}>
-                    <button
-                      className={selected === c.path ? 'tree-file selected' : 'tree-file'}
-                      onClick={() => onSelect(c)}
-                      title={c.originalPath ? `${c.originalPath} → ${c.path}` : c.path}
-                    >
-                      <span className={`badge badge-${c.change}`} title={TITLE[c.change]}>
-                        {BADGE[c.change]}
-                      </span>
-                      <span className="tree-name">{nameOf(c.path)}</span>
-                      {n && (
-                        <span className="counts">
-                          <span className="plus">+{n.added}</span> <span className="minus">−{n.removed}</span>
-                        </span>
-                      )}
-                    </button>
-                  </li>
-                );
-              })}
-            </ul>
-          </li>
-        ))}
+        {groups.dirs.map(([dir, entries]) => {
+          const open = !collapsed.has(dir);
+          return (
+            <li key={dir || '/'}>
+              <button
+                type="button"
+                className="tree-dir"
+                aria-expanded={open}
+                onClick={() => toggleDir(dir)}
+                title={open ? 'Replier ce dossier' : 'Déplier ce dossier'}
+              >
+                <svg className="tree-chevron" width="10" height="10" viewBox="0 0 10 10" aria-hidden="true">
+                  <path d="M3 2l4 3-4 3" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
+                </svg>
+                <span className="tree-dir-name">{dir || '/'}</span>
+                <span className="tree-dir-count">{entries.length}</span>
+              </button>
+              {open && (
+                <ul>
+                  {entries.map((c) => {
+                    const n = counts[c.path];
+                    return (
+                      <li key={c.path}>
+                        <button
+                          className={selected === c.path ? 'tree-file selected' : 'tree-file'}
+                          onClick={() => onSelect(c)}
+                          title={c.originalPath ? `${c.originalPath} → ${c.path}` : c.path}
+                        >
+                          <span className={`badge badge-${c.change}`} title={TITLE[c.change]}>
+                            {BADGE[c.change]}
+                          </span>
+                          <span className="tree-name">{nameOf(c.path)}</span>
+                          {n && (
+                            <span className="counts">
+                              <span className="plus">+{n.added}</span> <span className="minus">−{n.removed}</span>
+                            </span>
+                          )}
+                        </button>
+                      </li>
+                    );
+                  })}
+                </ul>
+              )}
+            </li>
+          );
+        })}
         {groups.total === 0 && <li className="muted pad">Aucun fichier.</li>}
         {groups.total > limit && (
           <li className="pad">

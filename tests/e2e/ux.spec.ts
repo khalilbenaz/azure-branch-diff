@@ -60,6 +60,34 @@ test('écran Comparer accessible, avec résultat', async () => {
   await a11y('compare');
 });
 
+test('liste des fichiers : chaque dossier se replie et se déplie', async () => {
+  const src = page.getByRole('button', { name: /^src/ });
+  await expect(src).toHaveAttribute('aria-expanded', 'true');
+  await expect(page.getByRole('button', { name: /Data\.cs/ })).toBeVisible();
+  await src.click();
+  await expect(src).toHaveAttribute('aria-expanded', 'false');
+  await expect(page.getByRole('button', { name: /Data\.cs/ })).toHaveCount(0);
+  await expect(page.getByRole('button', { name: /big\.sql/ })).toBeVisible();
+  await src.press('Enter');
+  await expect(page.getByRole('button', { name: /Data\.cs/ })).toBeVisible();
+  await page.getByRole('button', { name: 'Tout replier' }).click();
+  await expect(page.locator('.tree-file')).toHaveCount(0);
+  await a11y('tree-folded');
+  await page.getByRole('button', { name: 'Tout déplier' }).click();
+  await expect(page.locator('.tree-file')).toHaveCount(5);
+});
+
+test('guide d’utilisation : accessible depuis la barre latérale, sommaire navigable', async () => {
+  await page.getByRole('tab', { name: 'Guide' }).click();
+  await expect(page.getByRole('heading', { level: 1, name: 'Guide d’utilisation' })).toBeVisible();
+  const toc = page.getByRole('navigation', { name: 'Sommaire du guide' });
+  await toc.getByRole('link', { name: 'Merge local, dans toutes les directions' }).click();
+  await expect(page.getByRole('heading', { name: /Merge local, dans toutes les directions/ })).toBeInViewport();
+  await a11y('guide');
+  await page.getByRole('tab', { name: 'Comparer' }).click();
+  await expect(page.locator('.monaco-diff-editor')).toBeVisible();
+});
+
 test('le bouton Comparer reste désactivé tant que la sélection est incomplète', async () => {
   await page.getByLabel('Branche source').selectOption('');
   await expect(page.getByRole('button', { name: 'Comparer', exact: true })).toBeDisabled();
@@ -155,4 +183,19 @@ test('barre d’outils : trois cartes de même hauteur, contrôles alignés sur 
   expect(order.map((t) => t.toUpperCase())).toEqual(['CIBLE', 'SOURCE', 'MODE']);
   expect(new Set(heights).size).toBe(1);
   await page.setViewportSize({ width: 1280, height: 800 });
+});
+
+test('choix du thème : sombre, clair, puis système (mémorisé)', async () => {
+  await page.emulateMedia({ colorScheme: null }); // pas d'émulation : le thème natif décide
+  const bg = () => page.evaluate(() => getComputedStyle(document.body).backgroundColor);
+  const group = page.getByRole('group', { name: 'Thème' });
+  await group.getByRole('button', { name: 'Sombre' }).click();
+  await expect.poll(bg).toBe('rgb(17, 22, 29)');
+  await expect(group.getByRole('button', { name: 'Sombre' })).toHaveAttribute('aria-pressed', 'true');
+  await a11y('theme-dark');
+  await group.getByRole('button', { name: 'Clair' }).click();
+  await expect.poll(bg).toBe('rgb(243, 244, 247)');
+  expect(await app.evaluate(({ nativeTheme }) => nativeTheme.themeSource)).toBe('light');
+  await group.getByRole('button', { name: 'Système' }).click();
+  expect(await app.evaluate(({ nativeTheme }) => nativeTheme.themeSource)).toBe('system');
 });

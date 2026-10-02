@@ -2,7 +2,7 @@ import { createContext, useContext } from 'react';
 import type { RepoRef } from '../../../shared/api';
 import type { ApiError, LocalRepoInfo, MergeState, PrSummary } from '../../../shared/types';
 
-export type Tab = 'compare' | 'pr' | 'conflicts' | 'merge';
+export type Tab = 'compare' | 'pr' | 'conflicts' | 'merge' | 'guide';
 
 export interface Selection {
   repo: RepoRef;

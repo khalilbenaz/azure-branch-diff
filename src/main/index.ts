@@ -9,6 +9,7 @@ import { createAzureContext } from './azure/client';
 import { fakeContext } from './azure/fake';
 import { createHandlers } from './ipc';
 import { createUpdater } from './updater';
+import { SettingsStore, type ThemeSource } from './settings';
 import { isSafeExternalUrl } from './urls';
 
 // Version de l'app (app.getVersion() renvoie celle d'Electron quand l'app n'est pas packagée).
@@ -28,7 +29,7 @@ function createWindow(): BrowserWindow {
     icon,
     show: false,
     // Fond identique à l'interface : pas d'éclair blanc avant le premier rendu.
-    backgroundColor: nativeTheme.shouldUseDarkColors ? '#15181e' : '#f6f7f9',
+    backgroundColor: nativeTheme.shouldUseDarkColors ? '#11161d' : '#f3f4f7',
     webPreferences: {
       preload: join(__dirname, '../preload/index.js'),
       contextIsolation: true,
@@ -37,6 +38,14 @@ function createWindow(): BrowserWindow {
     },
   });
   win.once('ready-to-show', () => win.show());
+  // macOS : après un redimensionnement (bord, plein écran, mosaïque), la surface affichée peut garder
+  // l'ancienne taille et laisser voir le fond natif à droite. On force un rendu complet à la nouvelle taille.
+  const repaint = () => {
+    if (!win.isDestroyed()) win.webContents.invalidate();
+  };
+  for (const ev of ['resize', 'resized', 'maximize', 'unmaximize', 'enter-full-screen', 'leave-full-screen', 'restore'] as const) {
+    win.on(ev as 'resize', repaint);
+  }
   // L'app ne navigue jamais : tout lien externe part dans le navigateur.
   win.webContents.on('will-navigate', (e) => e.preventDefault());
   win.webContents.on('will-redirect', (e) => e.preventDefault());
@@ -52,6 +61,26 @@ function createWindow(): BrowserWindow {
 }
 
 app.whenReady().then(() => {
+  // Thème choisi par l'utilisateur (Système / Clair / Sombre) : appliqué avant la première fenêtre,
+  // il pilote prefers-color-scheme (interface, Monaco) et les boîtes de dialogue natives.
+  const settings = new SettingsStore(join(app.getPath('userData'), 'settings.json'));
+  nativeTheme.themeSource = settings.theme();
+  // Fond natif des fenêtres aligné sur le thème effectif (aussi quand le système bascule clair/sombre).
+  nativeTheme.on('updated', () => {
+    for (const w of BrowserWindow.getAllWindows()) w.setBackgroundColor(nativeTheme.shouldUseDarkColors ? '#11161d' : '#f3f4f7');
+  });
+  ipcMain.handle('theme:get', () => settings.theme());
+  ipcMain.handle('theme:set', (_e, t: unknown) => {
+    settings.setTheme(t as ThemeSource); // valeur vérifiée par SettingsStore
+    nativeTheme.themeSource = settings.theme();
+  // Fond natif des fenêtres aligné sur le thème effectif (aussi quand le système bascule clair/sombre).
+  nativeTheme.on('updated', () => {
+    for (const w of BrowserWindow.getAllWindows()) w.setBackgroundColor(nativeTheme.shouldUseDarkColors ? '#11161d' : '#f3f4f7');
+  });
+    for (const w of BrowserWindow.getAllWindows()) w.setBackgroundColor(nativeTheme.shouldUseDarkColors ? '#11161d' : '#f3f4f7');
+    return settings.theme();
+  });
+
   // En développement, le Dock afficherait l'icône d'Electron.
   if (process.platform === 'darwin' && !app.isPackaged) app.dock?.setIcon(icon);
   // Aucune permission navigateur (caméra, notifications, géolocalisation…) n'est nécessaire.
