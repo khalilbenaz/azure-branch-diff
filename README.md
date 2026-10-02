@@ -1,7 +1,7 @@
 # Azure Branch Diff
 
 [![CI](https://github.com/khalilbenaz/azure-branch-diff/actions/workflows/ci.yml/badge.svg)](https://github.com/khalilbenaz/azure-branch-diff/actions/workflows/ci.yml)
-[![Release](https://img.shields.io/github/v/release/khalilbenaz/azure-branch-diff)](https://github.com/khalilbenaz/azure-branch-diff/releases/latest)
+[![Release](https://img.shields.io/github/v/release.noindex/khalilbenaz/azure-branch-diff)](https://github.com/khalilbenaz/azure-branch-diff/releases/latest)
 
 Application de bureau (macOS et Windows) pour :
 

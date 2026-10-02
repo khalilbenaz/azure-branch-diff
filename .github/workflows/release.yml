@@ -55,11 +55,11 @@ jobs:
         with:
           name: installers-${{ matrix.os }}
           path: |
-            release/*.dmg
-            release/*.zip
-            release/*.exe
-            release/*.blockmap
-            release/latest*.yml
+            release.noindex/*.dmg
+            release.noindex/*.zip
+            release.noindex/*.exe
+            release.noindex/*.blockmap
+            release.noindex/latest*.yml
           if-no-files-found: error
 
   publish:

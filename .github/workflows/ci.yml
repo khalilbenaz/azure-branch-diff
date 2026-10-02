@@ -45,13 +45,8 @@ jobs:
       - name: Tests unitaires, sécurité, performance
         run: npm test
       - run: npm run build
-      - name: Tests E2E (Linux)
-        if: runner.os == 'Linux'
-        # Ubuntu 24.04 restreint les espaces de noms utilisateur : le bac à sable de Chromium en a besoin.
-        run: |
-          sudo sysctl -w kernel.apparmor_restrict_unprivileged_userns=0
-          xvfb-run --auto-servernum npx playwright test
-      - name: Tests E2E
+      - name: Tests E2E (macOS, Windows)
+        # Cibles de l'app. Sous Linux sans trousseau, safeStorage refuse de chiffrer le jeton : la connexion est impossible.
         if: runner.os != 'Linux'
         run: npx playwright test
       - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4

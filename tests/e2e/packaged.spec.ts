@@ -4,11 +4,11 @@ import { existsSync, mkdtempSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 
-// Vérifie l'app packagée (release/). Ignoré si aucun build packagé.
+// Vérifie l'app packagée (release.noindex/). Ignoré si aucun build packagé.
 const exe =
   process.platform === 'darwin'
-    ? `release/mac${process.arch === 'arm64' ? '-arm64' : ''}/Azure Branch Diff.app/Contents/MacOS/Azure Branch Diff`
-    : 'release/win-unpacked/Azure Branch Diff.exe';
+    ? `release.noindex/mac${process.arch === 'arm64' ? '-arm64' : ''}/Azure Branch Diff.app/Contents/MacOS/Azure Branch Diff`
+    : 'release.noindex/win-unpacked/Azure Branch Diff.exe';
 
 test.skip(!existsSync(exe), 'pas de build packagé');
 
