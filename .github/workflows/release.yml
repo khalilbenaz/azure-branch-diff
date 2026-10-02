@@ -8,6 +8,10 @@ on:
 permissions:
   contents: read
 
+# Le build de Monaco dépasse parfois la mémoire par défaut de Node sur les runners macOS.
+env:
+  NODE_OPTIONS: --max-old-space-size=6144
+
 jobs:
   check:
     name: Vérifier le tag
