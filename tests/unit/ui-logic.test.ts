@@ -31,7 +31,7 @@ test('azureFileBranch: where the file exists on Azure (null if nowhere)', () => 
 
 import { mergeInput, parseRefKey, refKey, toSide } from '../../src/renderer/src/lib/sides';
 
-const CLONE = { root: '/c', current: 'dev', dirty: false, branches: ['dev', 'main'], remoteBranches: ['main'], originUrl: null };
+const CLONE = { root: '/c', git: true, current: 'dev', dirty: false, branches: ['dev', 'main'], remoteBranches: ['main'], originUrl: null };
 const AZ = (branch: string) => ({ kind: 'azure' as const, project: 'P', repoId: 'r', branch });
 const LO = (ref: Parameters<typeof refKey>[0] & object) => ({ kind: 'local' as const, root: '/c', ref });
 
@@ -55,4 +55,7 @@ test('mergeInput : toutes les directions', () => {
   expect(mergeInput(LO({ type: 'remote', name: 'main' }), LO({ type: 'worktree' }), CLONE)).toEqual({ input: { root: '/c', source: { type: 'remote', name: 'main' }, target: { kind: 'local', branch: 'dev' } } });
   expect('reason' in mergeInput(LO({ type: 'worktree' }), AZ('main'), CLONE)).toBe(true);
   expect('reason' in mergeInput(AZ('f'), AZ('main'), null)).toBe(true);
+  const plain = { ...CLONE, git: false, current: null, branches: [], remoteBranches: [] };
+  const r = mergeInput(LO({ type: 'worktree' }), AZ('main'), plain);
+  expect('reason' in r && r.reason).toMatch(/clone git/);
 });

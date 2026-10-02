@@ -19,6 +19,7 @@ export function parseRefKey(key: string): LocalRef | null {
 export function refLabel(r: LocalRef, clone?: LocalRepoInfo | null, role: 'source' | 'cible' = 'source'): string {
   // En cible, la comparaison part du dernier commit de la branche extraite (HEAD), pas des fichiers modifiés.
   if (r.type === 'worktree') {
+    if (clone && !clone.git) return 'contenu du dossier';
     const b = clone?.current ? ` (${clone.current})` : '';
     return role === 'cible' ? `HEAD${b}` : `copie de travail${b}`;
   }
@@ -44,6 +45,8 @@ export const sameSide = (a: Side, b: Side) => JSON.stringify(a) === JSON.stringi
  */
 export function mergeInput(source: Side, target: Side, clone: LocalRepoInfo | null): { input: MergeStartInput } | { reason: string } {
   if (!clone) return { reason: 'Choisissez un clone local du dépôt pour fusionner localement.' };
+  if (!clone.git)
+    return { reason: 'Fusionner nécessite un clone git : le dossier choisi n’est pas un dépôt (archive téléchargée ?). Il reste comparable.' };
   let src: MergeStartInput['source'];
   if (source.kind === 'azure') src = { type: 'remote', name: source.branch };
   else if (source.ref.type === 'worktree') return { reason: 'La source d’un merge doit être une branche (commitez d’abord la copie de travail).' };

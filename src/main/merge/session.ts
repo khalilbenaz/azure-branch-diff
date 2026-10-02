@@ -66,7 +66,7 @@ export class MergeSession {
     const { root, source, target, env } = input;
     const run = (args: string[], dir = root) => gitRun(dir, args, env);
 
-    await assertSafeRepo(root);
+    await assertSafeRepo(root, source.type === 'remote' || target.kind === 'remote' ? 'network' : 'write');
     for (const key of ['user.name', 'user.email']) {
       if ((await run(['config', '--get', key])).stdout.trim() === '') {
         throw fail(`Identité git manquante : configurez-la avec « git config --global ${key} … ».`);
@@ -116,7 +116,7 @@ export class MergeSession {
     }
     const session = new MergeSession(input, { ...base, dir }, targetCommit, checkedOut);
     try {
-      const merge = await session.git(['merge', '--no-ff', '--no-commit', '--no-edit', sourceCommit]);
+      const merge = await session.git(['merge', '--no-ff', '--no-commit', '--no-edit', '--no-verify-signatures', sourceCommit]);
       session.st.conflicts = await session.readConflicts();
       if (merge.code !== 0 && session.st.conflicts.length === 0) throw fail(`Le merge a échoué : ${cleanGitMessage(`${merge.stderr}\n${merge.stdout}`)}`);
       session.st.phase = session.st.conflicts.length ? 'conflicts' : 'ready';
@@ -258,6 +258,7 @@ export class MergeSession {
   /** Pousse le résultat : cible locale → sa branche distante ; cible Azure → commit:cible. */
   async push(): Promise<void> {
     this.requirePhase('committed');
+    await assertSafeRepo(this.st.root, 'network');
     const branch = this.st.targetLabel.replace(/^origin\//, '');
     const dst = refSpec({ type: 'branch', name: branch });
     const args = this.st.targetIsRemote ? ['push', '--quiet', 'origin', `${this.st.commit}:${dst}`] : ['push', '--quiet', 'origin', `${dst}:${dst}`];
@@ -270,6 +271,7 @@ export class MergeSession {
   /** Secours quand la cible refuse le push : le commit de merge part sur une branche dédiée (pour une PR). */
   async pushAsBranch(name: string): Promise<string> {
     this.requirePhase('committed');
+    await assertSafeRepo(this.st.root, 'network');
     const dst = refSpec({ type: 'branch', name });
     const r = await this.git(['push', '--quiet', 'origin', `${this.st.commit}:${dst}`], this.st.root);
     if (r.code !== 0) throw pushError(r.stderr);

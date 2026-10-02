@@ -5,6 +5,7 @@ import { EMPTY_SIDE, getFileSide, listBranchChanges, listTree } from '../azure/d
 import { getGitInfo } from '../local/gitInfo';
 import { listLocalChanges, localFileSide, WORKTREE } from '../local/localDiff';
 import { localTree, resolveCommit } from '../local/repo';
+import { insideGitRepo } from '../local/safeGit';
 import { compareTrees } from './compareLocal';
 
 const fail = (message: string): ApiError => ({ code: 'unknown', message });
@@ -26,15 +27,13 @@ export async function compareSides(ctx: AzureContext | null, source: Side, targe
     const r = await listBranchChanges(needCtx(ctx), target.project, target.repoId, source.branch, target.branch, mode);
     return { kind: 'azure', ...r };
   }
-  if (source.kind === 'local' && target.kind === 'local') {
-    if (source.root !== target.root) throw fail('Les deux côtés locaux doivent venir du même clone.');
+  if (source.kind === 'local' && target.kind === 'local' && source.root === target.root && (await insideGitRepo(source.root))) {
     const r = await listLocalChanges(source.root, target.ref, source.ref, mode);
     const local = source.ref.type === 'worktree' ? await getGitInfo(source.root) : undefined;
     return { kind: 'local', changes: r.changes, baseCommit: r.baseCommit, sourceCommit: r.headCommit, targetCommit: r.baseCommit, local };
   }
-  // Mixte : Azure et local n'ont pas d'historique commun ici ; comparaison des têtes par empreintes.
-  const c = needCtx(ctx);
-  const tree = (side: Side) => (side.kind === 'azure' ? listTree(c, side.project, side.repoId, side.branch) : localTree(side.root, side.ref));
+  // Mixte (Azure ↔ local, ou deux dossiers différents) : pas d'historique commun ; comparaison des têtes par empreintes.
+  const tree = (side: Side) => (side.kind === 'azure' ? listTree(needCtx(ctx), side.project, side.repoId, side.branch) : localTree(side.root, side.ref));
   const [left, right] = await Promise.all([tree(target), tree(source)]);
   const [targetCommit, sourceCommit] = await Promise.all([
     target.kind === 'local' ? localCommit(target) : Promise.resolve(target.branch),

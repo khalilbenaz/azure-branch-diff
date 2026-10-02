@@ -1,19 +1,41 @@
-import { realpathSync } from 'node:fs';
+import { existsSync, readdirSync, realpathSync } from 'node:fs';
+import { join } from 'node:path';
 import type { ApiError, LocalRef, LocalRepoInfo } from '../../shared/types';
 import type { RemoteItem } from '../compare/compareLocal';
 import { hashLocalFiles } from './hashFiles';
 import { inExcludedDir, listLocalFiles } from './listFiles';
-import { gitOutput } from './safeGit';
+import { gitOutput, gitRun } from './safeGit';
 
 const fail = (message: string): ApiError => ({ code: 'unknown', message });
 
-/** Racine réelle du dépôt git contenant `dir`. */
-export async function repoRoot(dir: string): Promise<string> {
+/** Sous-dossiers directs qui sont des dépôts git (le dossier choisi en contient peut-être plusieurs). */
+function childRepos(dir: string): string[] {
   try {
-    return realpathSync.native((await gitOutput(dir, ['rev-parse', '--show-toplevel'])).trim());
+    return readdirSync(dir, { withFileTypes: true })
+      .filter((e) => e.isDirectory() && existsSync(join(dir, e.name, '.git')))
+      .map((e) => e.name)
+      .sort()
+      .slice(0, 8);
   } catch {
-    throw fail('Ce dossier n’est pas un dépôt git (ou git n’est pas installé).');
+    return [];
   }
+}
+
+/** Racine réelle du dépôt git contenant `dir`, avec un message qui dit pourquoi ce n'en est pas un. */
+export async function repoRoot(dir: string): Promise<string> {
+  let r;
+  try {
+    r = await gitRun(dir, ['rev-parse', '--show-toplevel']);
+  } catch {
+    throw fail('git est introuvable : installez git (ou les outils en ligne de commande Xcode sur macOS) puis relancez l’app.');
+  }
+  if (r.code === 0) return realpathSync.native(r.stdout.trim());
+  if (/dubious ownership/i.test(r.stderr)) {
+    throw fail(`git refuse ce dépôt car il appartient à un autre utilisateur : ${dir}. Si vous lui faites confiance : git config --global --add safe.directory "${dir}"`);
+  }
+  const repos = childRepos(dir);
+  if (repos.length) throw fail(`« ${dir} » n’est pas un dépôt git, mais il en contient : ${repos.join(', ')}. Choisissez l’un d’eux.`);
+  throw fail(`« ${dir} » n’est pas un dépôt git : choisissez le dossier racine d’un clone (celui qui contient .git).`);
 }
 
 /** Nom de branche valide et sans risque d'être lu comme une option ou une plage. */
@@ -74,6 +96,25 @@ async function refs(root: string, prefix: string): Promise<string[]> {
     .sort();
 }
 
+/**
+ * Dossier choisi par l'utilisateur : dépôt git (sa racine exacte) ou dossier simple (archive téléchargée, export,
+ * ou git absent). Un sous-dossier de dépôt reste refusé : il faut choisir la racine.
+ */
+export async function inspectFolder(dir: string): Promise<LocalRepoInfo> {
+  let r;
+  try {
+    r = await gitRun(dir, ['rev-parse', '--show-toplevel']);
+  } catch {
+    r = null; // git absent : dossier simple
+  }
+  if (r && r.code === 0) {
+    const root = realpathSync.native(r.stdout.trim());
+    if (root !== dir) throw fail(`Choisissez la racine du dépôt : ${root}`);
+    return repoInfo(root);
+  }
+  return { root: dir, git: false, current: null, dirty: false, branches: [], remoteBranches: [], originUrl: null };
+}
+
 export async function repoInfo(root: string): Promise<LocalRepoInfo> {
   const [branches, remoteBranches, status, current, origin] = await Promise.all([
     refs(root, 'refs/heads/'),
@@ -84,6 +125,7 @@ export async function repoInfo(root: string): Promise<LocalRepoInfo> {
   ]);
   return {
     root,
+    git: true,
     current: current.trim() || null,
     dirty: status.length > 0,
     branches,

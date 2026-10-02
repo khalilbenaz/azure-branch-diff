@@ -53,7 +53,7 @@ export function pushError(stderr: string): ApiError {
 
 /** Pousse une branche locale vers origin (avant une PR depuis une branche locale). */
 export async function pushLocalBranch(root: string, branch: string): Promise<void> {
-  await assertSafeRepo(root);
+  await assertSafeRepo(root, 'network');
   const spec = refSpec({ type: 'branch', name: branch });
   const r = await gitRun(root, ['push', '--quiet', 'origin', `${spec}:${spec}`]);
   if (r.code !== 0) throw pushError(r.stderr);

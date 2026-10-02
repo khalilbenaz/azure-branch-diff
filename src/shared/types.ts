@@ -9,6 +9,8 @@ export type Side = AzureSource | LocalSide;
 
 export interface LocalRepoInfo {
   root: string;
+  /** false : dossier simple (archive téléchargée, export) — comparaison uniquement, pas de merge. */
+  git: boolean;
   /** Branche extraite (null si HEAD détachée). */
   current: string | null;
   /** Modifications non commitées dans la copie de travail. */

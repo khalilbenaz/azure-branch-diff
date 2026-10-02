@@ -36,11 +36,8 @@ test.each([
   ['remote.origin.proxy', 'http://evil'],
   ['url.https://evil/.insteadOf', 'https://dev.azure.com/'],
   ['url.https://evil/.pushInsteadOf', 'https://dev.azure.com/'],
-  ['gpg.program', 'touch PWN'],
-  ['gpg.ssh.program', 'touch PWN'],
   ['diff.external', 'touch PWN'],
   ['protocol.ext.allow', 'always'],
-  ['include.path', '/tmp/x.conf'],
 ])('H1/H2 : config locale dangereuse refusée — %s', async (key, value) => {
   const { clone } = makeOrigin();
   git(clone, 'config', key, value);
@@ -52,6 +49,26 @@ test('H2 : la config de worktree (extensions.worktreeConfig) est aussi vérifié
   git(clone, 'config', 'extensions.worktreeConfig', 'true');
   git(clone, 'config', '--worktree', 'filter.z.smudge', 'touch PWN');
   await refused(assertSafeRepo(clone));
+});
+
+test('gpg.program défini par le dépôt : jamais exécuté (commit non signé, signatures non vérifiées)', async () => {
+  const { clone } = makeOrigin();
+  const marker = join(clone, 'PWNED-gpg');
+  git(clone, 'config', 'gpg.program', `sh -c 'touch "${marker}"'`);
+  git(clone, 'config', 'commit.gpgsign', 'true');
+  git(clone, 'config', 'merge.verifySignatures', 'true');
+  git(clone, 'config', 'log.showSignature', 'true');
+  git(clone, 'branch', 'tgt', 'master');
+  const s = await MergeSession.start({ root: clone, source: { type: 'remote', name: 'feature/data' }, target: { kind: 'local', branch: 'tgt' } });
+  try {
+    await s.commit('');
+  } finally {
+    await s.dispose();
+  }
+  await repoInfo(clone);
+  const { getGitInfo } = await import('../../src/main/local/gitInfo');
+  await getGitInfo(clone);
+  expect(existsSync(marker)).toBe(false);
 });
 
 test('H2 : un dépôt ordinaire est accepté', async () => {
