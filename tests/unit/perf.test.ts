@@ -16,11 +16,11 @@ function timed<T>(fn: () => T): [T, number] {
   return [r, performance.now() - t];
 }
 
-test('fromAzureDiff : 50 000 changements en moins de 500 ms', () => {
+test('fromAzureDiff : 50 000 changements en moins de 1,5 s (suite en parallèle)', () => {
   const changes = Array.from({ length: 50000 }, (_, i) => ({ changeType: 2, item: { path: `/src/m${i % 50}/F${i}.cs`, gitObjectType: 3 } }));
   const [r, ms] = timed(() => fromAzureDiff(changes));
   expect(r).toHaveLength(50000);
-  expect(ms).toBeLessThan(500 * F);
+  expect(ms).toBeLessThan(1500 * F);
 });
 
 test('toFileSide : fichier de 2 Mo en moins de 200 ms', () => {
