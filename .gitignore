@@ -1,6 +1,7 @@
 node_modules/
 out/
 release/
+release.noindex/
 test-results/
 playwright-report/
 .superpowers/

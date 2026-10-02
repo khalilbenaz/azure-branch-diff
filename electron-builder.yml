@@ -2,7 +2,8 @@ appId: com.khalilbenaz.azurebranchdiff
 productName: Azure Branch Diff
 copyright: Copyright © 2026 Khalil Benazzouz
 directories:
-  output: release
+  # « .noindex » : Spotlight n'indexe pas les apps intermédiaires du build.
+  output: release.noindex
   buildResources: build
 files:
   - out/**
