@@ -1,0 +1,172 @@
+<!doctype html>
+<html lang="fr">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Azure Branch Diff</title>
+  <meta name="description" content="Application de bureau (macOS, Windows) pour comparer des branches Azure DevOps, créer la Pull Request et régler les conflits." />
+  <link rel="icon" href="favicon.png" />
+  <meta property="og:title" content="Azure Branch Diff" />
+  <meta property="og:description" content="Comparer des branches Azure DevOps, créer la PR et régler les conflits, sans cloner." />
+  <meta property="og:image" content="img/02-diff.webp" />
+  <style>
+    :root {
+      --bg: #f6f7f9; --panel: #fff; --panel-2: #eef1f5; --border: #d9dde3; --text: #1d2330; --muted: #5a6172;
+      --accent: #0b66d6; --accent-text: #fff; --add: #116329; --radius: 12px; color-scheme: light;
+    }
+    @media (prefers-color-scheme: dark) {
+      :root { --bg: #111419; --panel: #1a1e25; --panel-2: #222832; --border: #313845; --text: #e5e8ed; --muted: #9aa1b0;
+        --accent: #4d9bff; --accent-text: #0b1220; --add: #56d364; color-scheme: dark; }
+    }
+    * { box-sizing: border-box; }
+    body { margin: 0; background: var(--bg); color: var(--text); font: 16px/1.6 system-ui, -apple-system, "Segoe UI", sans-serif; }
+    a { color: var(--accent); }
+    .wrap { max-width: 1080px; margin: 0 auto; padding: 0 16px; }
+    header.top { display: flex; align-items: center; gap: 12px; padding: 16px 0; }
+    header.top img { width: 32px; height: 32px; }
+    header.top .name { font-weight: 700; }
+    header.top nav { margin-left: auto; display: flex; gap: 16px; font-size: 15px; }
+    header.top nav a { color: var(--muted); text-decoration: none; }
+    header.top nav a:hover { color: var(--text); }
+    .hero { display: grid; grid-template-columns: 1.05fr 1fr; gap: 40px; align-items: center; padding: 40px 0 24px; }
+    .hero h1 { font-size: clamp(32px, 5vw, 48px); line-height: 1.1; margin: 0 0 16px; letter-spacing: -0.02em; }
+    .hero p.lead { font-size: 19px; color: var(--muted); margin: 0 0 24px; }
+    .cta { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; }
+    .btn { display: inline-flex; align-items: center; gap: 8px; padding: 12px 18px; border-radius: 10px; font-weight: 600;
+      text-decoration: none; border: 1px solid var(--border); background: var(--panel); color: var(--text); }
+    .btn.primary { background: var(--accent); border-color: var(--accent); color: var(--accent-text); }
+    .btn:hover { filter: brightness(1.05); }
+    .meta { font-size: 14px; color: var(--muted); margin-top: 12px; }
+    .shot { border-radius: var(--radius); border: 1px solid var(--border); box-shadow: 0 20px 50px rgba(0,0,0,.15); width: 100%; height: auto; display: block; background: var(--panel); }
+    section { padding: 40px 0; }
+    h2 { font-size: 28px; margin: 0 0 20px; letter-spacing: -0.01em; }
+    .grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; }
+    .card { background: var(--panel); border: 1px solid var(--border); border-radius: var(--radius); padding: 20px; }
+    .card h3 { margin: 0 0 6px; font-size: 17px; }
+    .card p { margin: 0; color: var(--muted); font-size: 15px; }
+    .gallery { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
+    figure { margin: 0; }
+    figcaption { font-size: 14px; color: var(--muted); margin-top: 8px; }
+    .downloads { display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; }
+    .downloads .card { display: flex; flex-direction: column; gap: 10px; }
+    .downloads .card .btn { justify-content: center; margin-top: auto; }
+    ol, ul { padding-left: 20px; }
+    li { margin: 4px 0; }
+    code { background: var(--panel-2); padding: 1px 6px; border-radius: 4px; font-size: 14px; word-break: break-word; }
+    pre { background: var(--panel-2); padding: 12px 14px; border-radius: 8px; overflow-x: auto; font-size: 14px; }
+    footer { border-top: 1px solid var(--border); color: var(--muted); font-size: 14px; padding: 24px 0 40px; margin-top: 24px; }
+    @media (max-width: 860px) {
+      .hero { grid-template-columns: 1fr; padding-top: 16px; }
+      .grid, .downloads, .gallery { grid-template-columns: 1fr; }
+      header.top nav { display: none; }
+    }
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <header class="top">
+      <img src="icon.png" alt="" />
+      <span class="name">Azure Branch Diff</span>
+      <nav>
+        <a href="#fonctions">Fonctions</a>
+        <a href="#telecharger">Télécharger</a>
+        <a href="#securite">Sécurité</a>
+        <a href="https://github.com/khalilbenaz/azure-branch-diff">GitHub</a>
+      </nav>
+    </header>
+
+    <div class="hero">
+      <div>
+        <h1>Comparez vos branches Azure DevOps. Fusionnez sans cloner.</h1>
+        <p class="lead">Une application de bureau pour voir le diff entre deux branches, ou entre une branche et votre dossier local, créer la Pull Request et régler les conflits, dans Azure ou directement dans l'app.</p>
+        <div class="cta">
+          <a class="btn primary" id="primary" href="#telecharger">Télécharger</a>
+          <a class="btn" href="https://github.com/khalilbenaz/azure-branch-diff">Code source</a>
+        </div>
+        <p class="meta" id="meta">macOS (Apple Silicon et Intel) · Windows 64 bits · gratuit, open source (MIT)</p>
+      </div>
+      <img class="shot" src="img/02-diff.webp" width="1400" height="900" alt="Diff côte à côte entre deux branches, avec la liste des fichiers modifiés" />
+    </div>
+
+    <section id="fonctions">
+      <h2>Ce que fait l'app</h2>
+      <div class="grid">
+        <div class="card"><h3>Diff entre branches</h3><p>Comme une PR (depuis l'ancêtre commun) ou tête contre tête. L'éditeur de VS Code, côte à côte ou unifié, avec coloration C#, SQL, XML, JSON…</p></div>
+        <div class="card"><h3>Branche ↔ dossier local</h3><p>Vos modifications non commitées comparées à la branche distante. Respecte <code>.gitignore</code> et <code>core.autocrlf</code> : pas de faux positifs CRLF/LF.</p></div>
+        <div class="card"><h3>Pull Request en un clic</h3><p>Reprend la PR active si elle existe, lie les work items, attend le calcul du merge, puis complète (merge, squash, rebase).</p></div>
+        <div class="card"><h3>Conflits : vous choisissez</h3><p>Réglez-les dans Azure, ou dans l'app : source, cible et résultat modifiable, « garder source / cible / les deux ».</p></div>
+        <div class="card"><h3>Rapide sur les gros dépôts</h3><p>Aucun clone : seuls les fichiers modifiés sont téléchargés. Des milliers de fichiers modifiés restent fluides à parcourir et à filtrer.</p></div>
+        <div class="card"><h3>Mises à jour automatiques</h3><p>Sous Windows, la nouvelle version s'installe au redémarrage. Sous macOS, l'app vous prévient et télécharge le nouvel installeur.</p></div>
+      </div>
+    </section>
+
+    <section>
+      <h2>Aperçu</h2>
+      <div class="gallery">
+        <figure><img class="shot" src="img/06-local.webp" width="1400" height="900" loading="lazy" alt="Comparaison d'un dossier local avec une branche Azure" /><figcaption>Dossier local comparé à la branche cible.</figcaption></figure>
+        <figure><img class="shot" src="img/04-conflicts.webp" width="1400" height="900" loading="lazy" alt="Liste des conflits d'une Pull Request" /><figcaption>Conflits de la PR : Azure ou l'app, au choix.</figcaption></figure>
+        <figure><img class="shot" src="img/05-resolver.webp" width="1400" height="900" loading="lazy" alt="Éditeur de résolution de conflit à trois volets" /><figcaption>Résolution : source, cible, résultat modifiable.</figcaption></figure>
+      </div>
+    </section>
+
+    <section id="telecharger">
+      <h2>Télécharger <span id="version" class="meta"></span></h2>
+      <div class="downloads">
+        <div class="card"><h3>macOS · Apple Silicon</h3><p class="meta">M1, M2, M3, M4…</p><a class="btn primary" data-os="mac-arm64" href="https://github.com/khalilbenaz/azure-branch-diff/releases/latest/download/Azure-Branch-Diff-mac-arm64.dmg">Télécharger le .dmg</a></div>
+        <div class="card"><h3>macOS · Intel</h3><p class="meta">Mac Intel</p><a class="btn" data-os="mac-x64" href="https://github.com/khalilbenaz/azure-branch-diff/releases/latest/download/Azure-Branch-Diff-mac-x64.dmg">Télécharger le .dmg</a></div>
+        <div class="card"><h3>Windows</h3><p class="meta">Windows 10 / 11, 64 bits</p><a class="btn" data-os="win" href="https://github.com/khalilbenaz/azure-branch-diff/releases/latest/download/Azure-Branch-Diff-Setup.exe">Télécharger l'installeur</a></div>
+      </div>
+      <h3>Premier lancement</h3>
+      <p>Les installeurs ne sont pas signés par un certificat éditeur :</p>
+      <ul>
+        <li><b>macOS</b> : glissez l'app dans Applications, puis <b>clic droit → Ouvrir</b>. Si macOS indique que l'app est endommagée : <code>xattr -dr com.apple.quarantine "/Applications/Azure Branch Diff.app"</code></li>
+        <li><b>Windows</b> : « Windows a protégé votre ordinateur » → <b>Informations complémentaires → Exécuter quand même</b>.</li>
+      </ul>
+      <h3>Connexion</h3>
+      <ol>
+        <li>Dans Azure DevOps : avatar → <b>Personal access tokens</b> → <b>New Token</b>.</li>
+        <li>Droits : <b>Code — Read &amp; Write</b> et <b>Work Items — Read</b>.</li>
+        <li>Dans l'app : l'URL de votre organisation (<code>https://dev.azure.com/…</code>) et le jeton.</li>
+      </ol>
+    </section>
+
+    <section id="securite">
+      <h2>Sécurité</h2>
+      <div class="grid">
+        <div class="card"><h3>Jeton chiffré</h3><p>Le PAT est chiffré par le trousseau du système (Keychain, DPAPI), jamais écrit en clair ni transmis à l'interface.</p></div>
+        <div class="card"><h3>Electron verrouillé</h3><p>Isolation de contexte, sandbox, pas de Node dans l'interface, CSP stricte, navigation et popups bloquées.</p></div>
+        <div class="card"><h3>Testé</h3><p>Tests de sécurité, d'accessibilité (WCAG AA), de performance et de bout en bout sur macOS, Windows et Linux à chaque version.</p></div>
+      </div>
+    </section>
+
+    <footer>
+      Azure Branch Diff · licence MIT · <a href="https://github.com/khalilbenaz/azure-branch-diff/releases">Historique des versions</a> · <a href="https://github.com/khalilbenaz/azure-branch-diff/issues">Signaler un problème</a><br />
+      Projet indépendant, non affilié à Microsoft. Azure DevOps est une marque de Microsoft.
+    </footer>
+  </div>
+
+  <script>
+    // Bouton principal adapté au système du visiteur.
+    (function () {
+      var ua = navigator.userAgent;
+      var os = /Windows/i.test(ua) ? 'win' : /Mac/i.test(ua) ? 'mac-arm64' : null;
+      var link = os && document.querySelector('[data-os="' + os + '"]');
+      var primary = document.getElementById('primary');
+      if (link) {
+        primary.href = link.href;
+        primary.textContent = os === 'win' ? 'Télécharger pour Windows' : 'Télécharger pour macOS';
+      }
+      // Version publiée (sans bloquer la page si l'API est indisponible).
+      fetch('https://api.github.com/repos/khalilbenaz/azure-branch-diff/releases/latest')
+        .then(function (r) { return r.ok ? r.json() : null; })
+        .then(function (rel) {
+          if (!rel || !rel.tag_name) return;
+          var v = rel.tag_name.replace(/^v/, '');
+          document.getElementById('version').textContent = '· version ' + v;
+          document.getElementById('meta').textContent = 'Version ' + v + ' · macOS (Apple Silicon et Intel) · Windows 64 bits · gratuit, open source (MIT)';
+        })
+        .catch(function () {});
+    })();
+  </script>
+</body>
+</html>

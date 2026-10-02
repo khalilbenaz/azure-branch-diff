@@ -1,0 +1,133 @@
+import { test, expect, _electron as electron, type ElectronApplication, type Page } from '@playwright/test';
+import { mkdtempSync, readFileSync } from 'node:fs';
+import { createRequire } from 'node:module';
+import { tmpdir } from 'node:os';
+import { join } from 'node:path';
+
+let app: ElectronApplication;
+let page: Page;
+
+const AXE_SOURCE = readFileSync(createRequire(__filename).resolve('axe-core/axe.min.js'), 'utf8');
+
+interface AxeViolation {
+  id: string;
+  impact: string | null;
+  help: string;
+  nodes: { target: string[] }[];
+}
+
+/** Analyse axe-core (WCAG 2.1 AA) ; échoue sur toute violation sérieuse ou critique. */
+async function a11y(context: string) {
+  await page.evaluate(AXE_SOURCE); // evaluate passe par DevTools : non soumis à la CSP de la page
+  const violations = await page.evaluate(async () => {
+    const axe = (window as unknown as { axe: { run(ctx: unknown, opts: unknown): Promise<{ violations: AxeViolation[] }> } }).axe;
+    const r = await axe.run(
+      // Monaco gère sa propre accessibilité (mode lecteur d'écran) : on l'exclut de l'analyse.
+      { exclude: [['.monaco-editor'], ['.monaco-diff-editor']] },
+      { runOnly: { type: 'tag', values: ['wcag2a', 'wcag2aa', 'wcag21a', 'wcag21aa'] } },
+    );
+    return r.violations.map((v) => ({ id: v.id, impact: v.impact, help: v.help, nodes: v.nodes.map((n) => ({ target: n.target })) }));
+  });
+  const serious = violations.filter((v) => v.impact === 'serious' || v.impact === 'critical');
+  expect(serious.map((v) => `${context}: ${v.id} — ${v.help} → ${v.nodes.map((n) => n.target.join(' ')).join(' | ')}`)).toEqual([]);
+}
+
+test.beforeAll(async () => {
+  app = await electron.launch({ args: ['out/main/index.js'], env: { ...process.env, AZ_FAKE: '1', ABD_USER_DATA: mkdtempSync(join(tmpdir(), 'abd-ux-')) } });
+  page = await app.firstWindow();
+  await page.setViewportSize({ width: 1280, height: 800 });
+});
+test.afterAll(async () => app?.close());
+
+test('connexion au clavier seul, écran accessible', async () => {
+  await expect(page.getByLabel('Organisation')).toBeFocused();
+  await a11y('login');
+  await page.keyboard.type('https://dev.azure.com/demo');
+  await page.keyboard.press('Tab');
+  await expect(page.getByLabel('Personal Access Token')).toBeFocused();
+  await page.keyboard.type('x');
+  await page.keyboard.press('Enter');
+  await expect(page.getByRole('tab', { name: 'Comparer' })).toBeVisible();
+});
+
+test('écran Comparer accessible, avec résultat', async () => {
+  await page.getByLabel('Projet').selectOption('Demo');
+  await page.getByLabel('Dépôt').selectOption('repo1');
+  await page.getByLabel('Branche source').selectOption('feature/data');
+  await page.getByRole('button', { name: 'Comparer', exact: true }).click();
+  await page.getByRole('button', { name: /Service\.cs/ }).click();
+  await expect(page.locator('.monaco-diff-editor')).toBeVisible();
+  await a11y('compare');
+});
+
+test('le bouton Comparer reste désactivé tant que la sélection est incomplète', async () => {
+  await page.getByLabel('Branche source').selectOption('');
+  await expect(page.getByRole('button', { name: 'Comparer', exact: true })).toBeDisabled();
+  await page.getByLabel('Branche source').selectOption('master');
+  await expect(page.getByText('Choisissez deux branches différentes.')).toBeVisible();
+  await expect(page.getByRole('button', { name: 'Comparer', exact: true })).toBeDisabled();
+  await page.getByLabel('Branche source').selectOption('feature/data');
+});
+
+test('filtre de fichiers par nom et par extension', async () => {
+  await page.getByRole('button', { name: 'Comparer', exact: true }).click();
+  await page.getByLabel('Filtrer les fichiers').fill('data');
+  await expect(page.locator('.tree-file')).toHaveCount(1);
+  await page.getByLabel('Filtrer les fichiers').fill('');
+  await page.getByLabel('Extension').selectOption('sql');
+  await expect(page.locator('.tree-file')).toHaveCount(2);
+  await page.getByLabel('Extension').selectOption('');
+});
+
+test('écrans PR et Conflits accessibles', async () => {
+  await page.getByRole('button', { name: 'Créer / ouvrir la PR' }).click();
+  await a11y('pr-form');
+  await page.getByRole('button', { name: 'Créer la PR' }).click();
+  await page.getByRole('button', { name: 'Gérer les conflits' }).click();
+  await expect(page.getByLabel('Conflits', { exact: true }).getByText('src/Service.cs')).toBeVisible();
+  await a11y('conflicts');
+});
+
+test('thème sombre suivi automatiquement', async () => {
+  await page.emulateMedia({ colorScheme: 'light' });
+  const light = await page.evaluate(() => getComputedStyle(document.body).backgroundColor);
+  await page.emulateMedia({ colorScheme: 'dark' });
+  const dark = await page.evaluate(() => getComputedStyle(document.body).backgroundColor);
+  expect(light).not.toBe(dark);
+  expect(dark).toBe('rgb(17, 22, 29)');
+  await a11y('dark');
+  await page.emulateMedia({ colorScheme: 'light' });
+});
+
+test('petite fenêtre (900×600) : pas de défilement horizontal', async () => {
+  await page.setViewportSize({ width: 900, height: 600 });
+  for (const tab of ['Comparer', 'Pull Request', 'Conflits']) {
+    await page.getByRole('tab', { name: tab }).click();
+    const overflow = await page.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth);
+    expect(overflow, tab).toBeLessThanOrEqual(0);
+  }
+  await page.setViewportSize({ width: 1280, height: 800 });
+});
+
+test('bandeau de mise à jour : version disponible, progression, prête', async () => {
+  const push = (state: unknown) =>
+    app.evaluate(({ BrowserWindow }, s) => BrowserWindow.getAllWindows()[0].webContents.send('update:state', s), state);
+  await push({ kind: 'available', version: '9.9.9', manual: true });
+  await expect(page.getByText('La version 9.9.9 est disponible.')).toBeVisible();
+  await a11y('update-banner');
+  if (process.platform === 'darwin') {
+    await app.evaluate(({ shell }) => {
+      (globalThis as unknown as { opened: string[] }).opened = [];
+      shell.openExternal = async (url: string) => void (globalThis as unknown as { opened: string[] }).opened.push(url);
+    });
+    await page.getByRole('button', { name: 'Télécharger' }).click();
+    const opened = await app.evaluate(() => (globalThis as unknown as { opened: string[] }).opened);
+    expect(opened).toEqual(['https://github.com/khalilbenaz/azure-branch-diff/releases/latest']);
+  }
+  await push({ kind: 'downloading', version: '9.9.9', percent: 37 });
+  await expect(page.getByText(/Téléchargement de la version 9\.9\.9… 37 %/)).toBeVisible();
+  await push({ kind: 'ready', version: '9.9.9' });
+  await expect(page.getByRole('button', { name: 'Redémarrer pour installer' })).toBeVisible();
+  await page.getByRole('button', { name: 'Au prochain lancement' }).click();
+  await expect(page.getByRole('button', { name: 'Redémarrer pour installer' })).toHaveCount(0);
+});
