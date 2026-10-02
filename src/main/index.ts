@@ -66,6 +66,8 @@ app.whenReady().then(() => {
     }),
     // AZ_FAKE=1 : Azure simulé (démo, tests) ; AZ_FAKE_BULK=n : n fichiers modifiés (tests de performance).
     connect: process.env.AZ_FAKE === '1' ? async () => fakeContext({ bulkChanges: Number(process.env.AZ_FAKE_BULK) || undefined }) : createAzureContext,
+    // Mode démo : organisations « découvertes » fictives.
+    discover: process.env.AZ_FAKE === '1' ? async () => ['https://dev.azure.com/demo', 'https://dev.azure.com/demo2'] : undefined,
     pickFolder: async () => {
       const win = BrowserWindow.getFocusedWindow();
       const opts = { properties: ['openDirectory' as const], title: 'Choisir le dossier local à comparer' };

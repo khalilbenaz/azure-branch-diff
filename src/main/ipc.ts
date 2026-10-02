@@ -2,7 +2,7 @@ import { readFile } from 'node:fs/promises';
 import { existsSync, realpathSync } from 'node:fs';
 import { isAbsolute, relative, resolve, sep } from 'node:path';
 import type { Api, CompareResult, NewPrInput, RepoRef } from '../shared/api';
-import type { ApiError, AzureSource, ChangeEntry, CompleteOptions, LocalRef, MergeResolution, MergeStartInput, Resolution, Result, Side } from '../shared/types';
+import type { ApiError, AzureSource, ChangeEntry, CompleteOptions, LocalRef, MergeResolution, MergeStartInput, OrgsState, Resolution, Result, Side } from '../shared/types';
 import { AuthStore, testConnection } from './auth';
 import { type AzureContext, trimOrgUrl } from './azure/client';
 import { listBranches, listProjects, listRepos } from './azure/browse';
@@ -15,6 +15,7 @@ import { insideGitRepo } from './local/safeGit';
 import { MergeSession } from './merge/session';
 import { originMatches, pushLocalBranch } from './merge/origin';
 import { cleanupStaleMerges } from './merge/cleanup';
+import { discoverOrgs } from './azure/discover';
 import { assertSafeRepo } from './merge/safety';
 import { normalizeError } from './errors';
 import { insideRoot } from './paths';
@@ -28,6 +29,8 @@ export interface HandlerDeps {
   openExternal: (url: string) => Promise<void>;
   /** Confirmation native avant une action sur le serveur (push). Absente : refusée. */
   confirm?: (message: string, detail: string) => Promise<boolean>;
+  /** Organisations accessibles avec un jeton (défaut : API Azure DevOps). */
+  discover?: (pat: string) => Promise<string[]>;
 }
 
 const fail = (code: ApiError['code'], message: string): ApiError => ({ code, message });
@@ -92,6 +95,8 @@ export function createHandlers(deps: HandlerDeps): Api {
     if (o.kind === 'delete') return { kind: 'delete' };
     return resolution(o);
   };
+
+  const orgsState = (): OrgsState => ({ orgs: deps.store.orgs(), tokens: deps.store.tokens(), active: session?.orgUrl ?? deps.store.load()?.orgUrl ?? null });
 
   let merge: MergeSession | null = null;
   let mergeStarting = false;
@@ -220,7 +225,55 @@ export function createHandlers(deps: HandlerDeps): Api {
       wrap(async () => {
         session = null;
         approvedRoots.clear();
-        deps.store.clear();
+      }),
+
+    orgs: () => wrap(async () => orgsState()),
+
+    connectOrg: (orgUrl) =>
+      wrap(async () => {
+        const url = trimOrgUrl(str(orgUrl, 'organisation'));
+        if (merge && !mergeDone(merge)) throw fail('unknown', 'Un merge local est en cours : terminez-le ou annulez-le avant de changer d’organisation.');
+        const pat = deps.store.patFor(url);
+        if (pat === null) throw fail('unknown', 'Organisation inconnue : ajoutez-la depuis l’écran de connexion.');
+        await open(url, pat);
+        deps.store.setActive(url);
+        return { orgUrl: url };
+      }),
+
+    addOrgs: (input) =>
+      wrap(async () => {
+        const o = obj(input, 'organisations');
+        if (!Array.isArray(o.orgUrls) || !o.orgUrls.length) throw fail('unknown', 'Choisissez au moins une organisation.');
+        const urls = [...new Set(o.orgUrls.map((u) => trimOrgUrl(str(u, 'organisation'))))];
+        for (const u of urls) if (!/^https:\/\/[^\s/]+/.test(u)) throw fail('unknown', 'L’URL de l’organisation doit commencer par https://');
+        const pat = o.tokenId !== undefined ? deps.store.tokenPat(str(o.tokenId, 'jeton')) : str(o.pat, 'jeton').trim();
+        if (!pat) throw fail('unknown', 'Jeton inconnu.');
+        if (merge && !mergeDone(merge)) throw fail('unknown', 'Un merge local est en cours : terminez-le ou annulez-le avant de changer d’organisation.');
+        await open(urls[0], pat); // le jeton est vérifié avant tout enregistrement
+        const tokenId = o.tokenId !== undefined ? String(o.tokenId) : deps.store.addToken(o.label === undefined ? '' : str(o.label, 'nom du jeton', 100), pat);
+        for (const u of urls) deps.store.addOrg(u, tokenId);
+        deps.store.setActive(urls[0]);
+        return orgsState();
+      }),
+
+    discoverOrgs: (input) =>
+      wrap(async () => {
+        const o = obj(input, 'jeton');
+        const pat = o.tokenId !== undefined ? deps.store.tokenPat(str(o.tokenId, 'jeton')) : str(o.pat, 'jeton').trim();
+        if (!pat) throw fail('unknown', 'Jeton inconnu.');
+        try {
+          return await (deps.discover ?? discoverOrgs)(pat);
+        } catch (e) {
+          throw normalizeError(e, pat);
+        }
+      }),
+
+    removeOrg: (orgUrl) =>
+      wrap(async () => {
+        const url = trimOrgUrl(str(orgUrl, 'organisation'));
+        if (session?.orgUrl === url) session = null;
+        deps.store.removeOrg(url);
+        return orgsState();
       }),
 
     projects: () => wrap(() => listProjects(ctx())),

@@ -35,11 +35,15 @@ L'app vérifie les nouvelles versions au démarrage puis toutes les 4 heures (Re
 - **Windows** : la mise à jour est téléchargée en arrière-plan, puis installée au redémarrage ;
 - **macOS** : l'installation automatique exige une signature Apple Developer ID ; l'app affiche donc la nouvelle version et ouvre le téléchargement du `.dmg` en un clic.
 
-## Connexion
+## Connexion et organisations
 
-Azure DevOps → avatar → **Personal access tokens** → **New Token**, avec les droits **Code — Read & Write** et **Work Items — Read**. Dans l'app : l'URL de l'organisation (`https://dev.azure.com/<organisation>`) et le jeton.
+Azure DevOps → avatar → **Personal access tokens** → **New Token**, avec les droits **Code — Read & Write** et **Work Items — Read**.
 
-Le jeton est chiffré par le trousseau du système (Keychain macOS, DPAPI Windows), n'est jamais écrit en clair ni transmis à l'interface. **Déconnexion** l'efface.
+- **Un jeton par organisation**, ou **un jeton pour toutes les organisations accessibles** : dans ce cas « **Découvrir mes organisations** » les liste et vous cochez celles à ajouter.
+- Ajouter une organisation : nouveau PAT (nommé) ou **jeton déjà enregistré**.
+- Une fois connecté, le sélecteur **Organisation** de la barre latérale bascule de l'une à l'autre (le clone local est gardé). **Déconnexion** ramène à la liste sans rien oublier ; **Retirer** oublie une organisation (et son jeton s'il ne sert plus).
+
+Les jetons sont chiffrés par le trousseau du système (Keychain macOS, DPAPI Windows), jamais écrits en clair ni transmis à l'interface.
 
 ## Utilisation
 

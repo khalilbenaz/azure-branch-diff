@@ -175,6 +175,18 @@ label.check input { height: auto; }
 .hint-box { display: flex; gap: 10px; padding: 12px; background: var(--info-bg); border-radius: 8px; font-size: 13px; color: var(--text-2); }
 .hint-box svg { flex-shrink: 0; margin-top: 1px; color: var(--accent); }
 
+/* Organisations enregistrées */
+.org-list { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 6px; }
+.org-item { display: flex; align-items: center; gap: 8px; padding: 10px 12px; border: 1px solid var(--line); border-radius: 10px; }
+.org-item.active { border-color: var(--accent); box-shadow: inset 3px 0 0 var(--accent); }
+.org-text { flex: 1; min-width: 0; display: flex; flex-direction: column; }
+.org-text strong { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.found { border: 1px solid var(--line); border-radius: 10px; padding: 10px 12px; display: flex; flex-direction: column; gap: 6px; }
+.found legend { font-size: 12px; color: var(--muted); padding: 0 4px; }
+.side-org select { color: #ffffff; background: var(--side-2); border-color: var(--side-line); font-size: 13px; width: 100%; }
+.side-foot .row { gap: 6px; flex-wrap: nowrap; }
+.side-foot .row button { flex: 1; }
+
 /* Coquille : barre latérale + contenu */
 .shell { display: flex; height: 100%; }
 .side { width: 248px; flex-shrink: 0; background: var(--side); color: var(--side-text); display: flex; flex-direction: column; gap: 22px; padding: 18px 14px; overflow-y: auto; }
@@ -226,7 +238,9 @@ label.check input { height: auto; }
 .segmented.xs { height: 28px; border-radius: 7px; }
 .segmented.xs button { font-size: 12px; padding: 0 10px; }
 .toolbar .swap { align-self: flex-end; margin-bottom: var(--card-inset); }
-.toolbar-actions { display: flex; align-items: flex-end; gap: 8px; flex-wrap: wrap; justify-content: flex-end; padding-bottom: var(--card-inset); }
+.actions-card { flex: 0 0 auto; }
+.actions-row { display: flex; gap: 8px; }
+.segmented.xs button:disabled { cursor: default; opacity: 0.6; }
 .toolbar-note { padding: 6px 20px; font-size: 12.5px; color: var(--muted); background: var(--panel); border-bottom: 1px solid var(--line-soft); }
 
 /* Comparer */

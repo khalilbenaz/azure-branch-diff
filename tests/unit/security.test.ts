@@ -121,6 +121,8 @@ describe('IPC surface', () => {
     // compare / fileSides / localRepo : les côtés locaux ne demandent pas de session Azure (vérifié ci-dessous pour les côtés Azure).
     const open = ['session', 'login', 'logout', 'pickFolder', 'openExternal', 'localRepo', 'compare', 'fileSides'];
     // Merge local : n'utilise que git et le clone approuvé (mergeFallbackPr, qui crée une PR, reste soumis à la session).
+    // Organisations : gérées avant toute session (liste, ajout, découverte, retrait).
+    open.push('orgs', 'connectOrg', 'addOrgs', 'discoverOrgs', 'removeOrg');
     open.push('mergeStart', 'mergeState', 'mergeConflictSides', 'mergeResolve', 'mergeCommit', 'mergePush', 'mergeAbort', 'mergeClose', 'pushBranch', 'originCheck');
     for (const m of API_METHODS.filter((x) => !open.includes(x))) {
       const r = (await (api[m] as (...a: unknown[]) => Promise<{ ok: boolean; error?: { code: string } }>)({ project: 'P', repoId: 'r', repoName: 'n' }, 1, 1, { kind: 'source' })) as { ok: boolean; error?: { code: string } };

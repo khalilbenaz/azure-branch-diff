@@ -165,30 +165,39 @@ export function SourcePicker({ busy, onCompare, onError, onPr, onMerge }: Props)
           <IconSwap />
         </button>
         <SideCard role="cible" draft={target} onDraft={setTarget} branches={branches} />
-        <div className="toolbar-actions">
-          <select
-            value={mixed ? 'tips' : mode}
-            disabled={mixed}
-            onChange={(e) => setMode(e.target.value as 'mergeBase' | 'tips')}
-            aria-label="Mode de comparaison"
-            title={
-              mixed
-                ? 'Azure ↔ local : dernières versions uniquement'
-                : "Comme une PR : depuis l'ancêtre commun. Tête contre tête : dernières versions."
-            }
-          >
-            <option value="mergeBase">Comme une PR</option>
-            <option value="tips">Tête contre tête</option>
-          </select>
-          <button className="btn" disabled={!ready || busy} onClick={() => onCompare(value())}>
-            {busy ? 'Comparaison…' : 'Comparer'}
-          </button>
-          <button className="btn" disabled={!canPr} onClick={() => onPr(value())} title="Pull Request Azure (cible Azure)">
-            Créer / ouvrir la PR
-          </button>
-          <button className="btn btn-primary" disabled={!ready} onClick={() => onMerge(value())} title="Merge dans le clone local">
-            <IconMerge size={16} /> Fusionner
-          </button>
+        <div className="side-card actions-card">
+          <div className="side-card-head">
+            <span className="eyebrow">Mode</span>
+            <span className="spacer" />
+            <div
+              className="segmented xs"
+              role="group"
+              aria-label="Mode de comparaison"
+              title={
+                mixed
+                  ? 'Azure ↔ local : dernières versions uniquement'
+                  : "Comme une PR : depuis l'ancêtre commun. Tête contre tête : dernières versions."
+              }
+            >
+              <button aria-pressed={!mixed && mode === 'mergeBase'} disabled={mixed} onClick={() => setMode('mergeBase')}>
+                Comme une PR
+              </button>
+              <button aria-pressed={mixed || mode === 'tips'} disabled={mixed} onClick={() => setMode('tips')}>
+                Tête contre tête
+              </button>
+            </div>
+          </div>
+          <div className="actions-row">
+            <button className="btn" disabled={!ready || busy} onClick={() => onCompare(value())}>
+              {busy ? 'Comparaison…' : 'Comparer'}
+            </button>
+            <button className="btn" disabled={!canPr} onClick={() => onPr(value())} title="Pull Request Azure (cible Azure)">
+              Créer / ouvrir la PR
+            </button>
+            <button className="btn btn-primary" disabled={!ready} onClick={() => onMerge(value())} title="Merge dans le clone local">
+              <IconMerge size={16} /> Fusionner
+            </button>
+          </div>
         </div>
       </div>
       {identical && <div className="toolbar-note">Choisissez deux branches différentes.</div>}

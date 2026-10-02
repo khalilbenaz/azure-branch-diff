@@ -72,10 +72,12 @@ test('PAT never appears in error messages', async () => {
   expect(JSON.stringify(r)).not.toContain('super-secret-pat');
 });
 
-test('logout clears stored credentials', async () => {
+test('logout keeps saved organisations; removing the last one forgets its PAT', async () => {
   const { api, store } = setup();
   ok(await api.login('https://dev.azure.com/X', 'pat'));
   ok(await api.logout());
+  expect(store.load()).toEqual({ orgUrl: 'https://dev.azure.com/X', pat: 'pat' });
+  ok(await api.removeOrg('https://dev.azure.com/X'));
   expect(store.load()).toBeNull();
   expect(ok(await api.session())).toBeNull();
 });
