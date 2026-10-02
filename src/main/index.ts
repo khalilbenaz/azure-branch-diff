@@ -73,6 +73,12 @@ app.whenReady().then(() => {
       return r.canceled ? null : (r.filePaths[0] ?? null);
     },
     openExternal: (url) => shell.openExternal(url),
+    confirm: async (message, detail) => {
+      const win = BrowserWindow.getFocusedWindow() ?? BrowserWindow.getAllWindows()[0];
+      const opts = { type: 'question' as const, buttons: ['Pousser', 'Annuler'], defaultId: 1, cancelId: 1, message, detail, noLink: true };
+      const r = win ? await dialog.showMessageBox(win, opts) : await dialog.showMessageBox(opts);
+      return r.response === 0;
+    },
   });
   const updates = createUpdater({
     updater: autoUpdater,

@@ -6,7 +6,7 @@ import { AuthStore } from '../../src/main/auth';
 import { normalizeError } from '../../src/main/errors';
 import { fakeContext } from '../../src/main/azure/fake';
 import { API_METHODS } from '../../src/shared/api';
-import { tempDir, reverseCipher } from './helpers';
+import { tempDir, reverseCipher, gitDir, worktreeSide } from './helpers';
 
 const PAT = 'pat-SECRET-0123456789abcdef';
 const TARGET = { kind: 'azure' as const, project: 'Demo', repoId: 'repo1', branch: 'master' };
@@ -85,11 +85,11 @@ describe('external links and URLs', () => {
 describe('local file access', () => {
   const cases = ['../outside.txt', '../../etc/passwd', '/etc/passwd', 'sub/../../outside.txt', '..', '..\\..\\windows\\win.ini'];
   test.each(cases)('fileSides refuses %s', async (path) => {
-    const root = tempDir({ 'sub/a.cs': 'x' });
+    const root = gitDir({ 'sub/a.cs': 'x' });
     const { api } = handlers({ pickFolder: async () => root });
     await api.login('https://dev.azure.com/X', PAT);
     await api.pickFolder();
-    const r = await api.fileSides({ kind: 'local', path: root }, TARGET, { path, change: 'edit', isBinary: false }, { changes: [] });
+    const r = await api.fileSides(worktreeSide(root), TARGET, { path, change: 'edit', isBinary: false }, { changes: [] });
     if (path.includes('\\') && process.platform !== 'win32') {
       // Sur macOS/Linux, « \\ » est un caractère de nom de fichier, pas un séparateur : le chemin reste dans le dossier.
       expect(r.ok && r.value.right.content).toBe('');
@@ -109,9 +109,19 @@ describe('IPC surface', () => {
     }
   });
 
-  test('every method requires a session except session/login/logout/pickFolder/openExternal', async () => {
+  test('a comparison with an Azure side requires a session', async () => {
     const { api } = handlers();
-    const open = ['session', 'login', 'logout', 'pickFolder', 'openExternal'];
+    const az = { kind: 'azure' as const, project: 'P', repoId: 'r', branch: 'b' };
+    const r = await api.compare(az, { ...az, branch: 'c' }, 'tips');
+    expect(!r.ok && r.error.code).toBe('auth');
+  });
+
+  test('every Azure method requires a session', async () => {
+    const { api } = handlers();
+    // compare / fileSides / localRepo : les côtés locaux ne demandent pas de session Azure (vérifié ci-dessous pour les côtés Azure).
+    const open = ['session', 'login', 'logout', 'pickFolder', 'openExternal', 'localRepo', 'compare', 'fileSides'];
+    // Merge local : n'utilise que git et le clone approuvé (mergeFallbackPr, qui crée une PR, reste soumis à la session).
+    open.push('mergeStart', 'mergeState', 'mergeConflictSides', 'mergeResolve', 'mergeCommit', 'mergePush', 'mergeAbort', 'mergeClose', 'pushBranch', 'originCheck');
     for (const m of API_METHODS.filter((x) => !open.includes(x))) {
       const r = (await (api[m] as (...a: unknown[]) => Promise<{ ok: boolean; error?: { code: string } }>)({ project: 'P', repoId: 'r', repoName: 'n' }, 1, 1, { kind: 'source' })) as { ok: boolean; error?: { code: string } };
       expect(r.ok, m).toBe(false);

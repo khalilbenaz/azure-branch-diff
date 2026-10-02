@@ -1,4 +1,4 @@
-import type { AzureSource, ChangeEntry, Resolution, Source } from '../../../shared/types';
+import type { ChangeEntry, Resolution, Side } from '../../../shared/types';
 
 /** "12, 34 56" → [12, 34, 56] ; null si une valeur n'est pas un entier positif. */
 export function parseWorkItems(text: string): number[] | null {
@@ -14,8 +14,9 @@ export function toResolution(result: string, source: string, target: string, bom
   return { kind: 'content', text: bom ? `\uFEFF${result}` : result };
 }
 
-/** Branche Azure où le fichier existe, pour « Ouvrir dans Azure » ; null s'il n'existe que localement. */
-export function azureFileBranch(entry: ChangeEntry, source: Source, target: AzureSource): string | null {
-  if (source.kind === 'local') return entry.change === 'add' ? null : target.branch;
-  return entry.change === 'delete' ? target.branch : source.branch;
+/** Branche Azure où le fichier existe, pour « Ouvrir dans Azure » ; null s'il n'existe sur aucune branche Azure comparée. */
+export function azureFileBranch(entry: ChangeEntry, source: Side, target: Side): string | null {
+  if (source.kind === 'azure' && entry.change !== 'delete') return source.branch;
+  if (target.kind === 'azure' && entry.change !== 'add') return target.branch;
+  return null;
 }

@@ -5,10 +5,9 @@
 
 Application de bureau (macOS et Windows) pour :
 
-- **comparer deux branches** d'un dépôt Azure DevOps, sans cloner le dépôt : liste des fichiers modifiés et diff côte à côte (éditeur de VS Code) ;
-- **comparer une branche Azure avec un dossier local**, modifications non commitées comprises ;
-- **créer ou reprendre une Pull Request** entre les deux branches ;
-- **régler les conflits** de la PR, au choix dans Azure (navigateur) ou dans l'app, puis **compléter la PR**.
+- **comparer** deux côtés, chacun **branche Azure** ou **référence d'un clone local** (branche, `origin/*`, copie de travail) : Azure ↔ Azure, Azure ↔ local, local ↔ local ; diff côte à côte (éditeur de VS Code) ;
+- **créer ou reprendre une Pull Request** quand la cible est Azure, puis **régler les conflits** dans Azure ou dans l'app et **compléter la PR** ;
+- **fusionner localement dans toutes les directions** : merge dans un worktree temporaire (votre copie de travail n'est pas touchée), conflits réglés dans l'app, commit, push.
 
 **Site et téléchargements : https://khalilbenaz.github.io/azure-branch-diff/**
 
@@ -44,7 +43,18 @@ Le jeton est chiffré par le trousseau du système (Keychain macOS, DPAPI Window
 
 ## Utilisation
 
-1. **Comparer** : projet → dépôt → branche **source** (ou **Dossier local**) → branche **cible**.
+Dans la barre latérale : le **dépôt Azure** et/ou le **clone local**. Dans la barre d'outils, pour la **Source** et la **Cible** : `Azure` ou `Local`, puis la branche.
+
+| Source → Cible | Comparer | PR Azure | Fusionner (merge local) |
+|---|---|---|---|
+| Azure → Azure | ✓ | ✓ | merge dans un worktree, puis push vers la cible |
+| Local → Azure | ✓ (dernières versions) | ✓ (la branche locale est d'abord poussée) | merge dans un worktree sur `origin/cible`, puis push |
+| Azure → Local | ✓ (dernières versions) | — | merge de `origin/source` dans la branche locale, push optionnel |
+| Local → Local | ✓ | — | merge, commit, push optionnel |
+
+Si Azure refuse le push (politique de branche), l'app propose **« Créer une PR à la place »** : le commit de merge part sur une branche `merge/…` et une PR est créée. Les hooks git ne sont pas exécutés et un dépôt dont la configuration locale exécuterait des commandes (filtres, pilotes de merge) est refusé.
+
+1. **Comparer** : choisir la source et la cible, puis « Comparer ».
    - *Depuis l'ancêtre commun* (par défaut) : ce que la PR apporterait ; *Tête contre tête* : différence brute.
    - Filtre par nom ou extension ; « Vue unifiée » / « Côte à côte ».
    - Fichiers binaires, de plus de 2 Mo ou non UTF-8 : signalés, avec un lien vers Azure.

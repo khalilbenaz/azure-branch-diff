@@ -1,14 +1,10 @@
 import { useEffect, useRef, useState } from 'react';
-import { Editor } from '@monaco-editor/react';
-import type { ApiError, ConflictEntry, FileSide } from '../../../shared/types';
+import type { ApiError, ConflictEntry, FileSide, Resolution } from '../../../shared/types';
 import { api, asApiError, call } from '../lib/api';
 import { useApp } from '../lib/context';
-import { languageFor } from '../lib/eol';
-import { useMonacoTheme } from '../lib/theme';
 import { ErrorBanner } from '../components/ErrorBanner';
 import { IconExternal } from '../lib/icons';
-import { toResolution } from '../lib/prLogic';
-import '../lib/monaco';
+import { Resolver } from '../components/Resolver';
 
 const TYPE_LABEL: Record<string, string> = {
   editEdit: 'Modifié des deux côtés',
@@ -28,13 +24,11 @@ export function Conflicts({ active }: { active: boolean }) {
   const pr = app.pr;
   const prIdRef = useRef(pr?.id);
   prIdRef.current = pr?.id;
-  const theme = useMonacoTheme();
   const [list, setList] = useState<ConflictEntry[] | null>(null);
   const [error, setError] = useState<ApiError | null>(null);
   const [info, setInfo] = useState<string | null>(null);
   const [current, setCurrent] = useState<ConflictEntry | null>(null);
   const [sides, setSides] = useState<Sides | null>(null);
-  const [result, setResult] = useState('');
   const [busy, setBusy] = useState(false);
 
   const report = (e: unknown) => {
@@ -69,7 +63,6 @@ export function Conflicts({ active }: { active: boolean }) {
     try {
       const s = await call(api.conflictSides(sel.repo, pr.id, c.id));
       setSides(s);
-      setResult(s.target.content);
     } catch (e) {
       setCurrent(null);
       report(e);
@@ -86,13 +79,12 @@ export function Conflicts({ active }: { active: boolean }) {
     }
   }
 
-  async function submit() {
+  async function submit(r: Resolution) {
     if (!sel || !pr || !current || !sides) return;
     setBusy(true);
     setError(null);
     try {
-      const bom = !!(sides.target.bom || sides.source.bom);
-      await call(api.resolve(sel.repo, pr.id, current.id, toResolution(result, sides.source.content, sides.target.content, bom)));
+      await call(api.resolve(sel.repo, pr.id, current.id, r));
       setInfo(`Conflit résolu : ${current.path}`);
       setCurrent(null);
       setSides(null);
@@ -142,14 +134,6 @@ export function Conflicts({ active }: { active: boolean }) {
 
   const remaining = list?.filter((c) => !c.resolved).length ?? 0;
   const blocked = sides && [sides.source, sides.target, sides.base].some((s) => s.isBinary || s.tooLarge || s.lossy);
-  const lang = current ? languageFor(current.path) : 'plaintext';
-  const ro = {
-    readOnly: true,
-    minimap: { enabled: false },
-    automaticLayout: true,
-    scrollBeyondLastLine: false,
-    fontSize: 13,
-  };
 
   return (
     <>
@@ -240,54 +224,16 @@ export function Conflicts({ active }: { active: boolean }) {
           )}
           {current && sides && !blocked && (
             <>
-              <div className="resolver-top">
-                <div className="pane">
-                  <div className="pane-title">
-                    <span className="dot" style={{ background: 'var(--accent)' }} />
-                    <strong>Source</strong>
-                    <span className="mono muted">{pr.sourceBranch}</span>
-                    <span className="spacer" />
-                    <button className="btn btn-sm" onClick={() => setResult(sides.source.content)}>
-                      Garder source
-                    </button>
-                  </div>
-                  <Editor value={sides.source.content} language={lang} theme={theme} options={ro} />
-                </div>
-                <div className="pane">
-                  <div className="pane-title">
-                    <span className="dot" style={{ background: 'var(--warn)' }} />
-                    <strong>Cible</strong>
-                    <span className="mono muted">{pr.targetBranch}</span>
-                    <span className="spacer" />
-                    <button className="btn btn-sm" onClick={() => setResult(sides.target.content)}>
-                      Garder cible
-                    </button>
-                  </div>
-                  <Editor value={sides.target.content} language={lang} theme={theme} options={ro} />
-                </div>
-              </div>
-              <div className="pane result">
-                <div className="pane-title">
-                  <strong>Résultat (modifiable)</strong>
-                  <span className="muted">sera envoyé à Azure</span>
-                  <span className="spacer" />
-                  <button className="btn btn-sm" onClick={() => setResult(`${sides.source.content}\n${sides.target.content}`)}>
-                    Garder les deux
-                  </button>
-                </div>
-                <Editor
-                  value={result}
-                  onChange={(v) => setResult(v ?? '')}
-                  language={lang}
-                  theme={theme}
-                  options={{
-                    minimap: { enabled: false },
-                    automaticLayout: true,
-                    scrollBeyondLastLine: false,
-                    fontSize: 13,
-                  }}
-                />
-              </div>
+              <Resolver
+                path={current.path}
+                sides={sides}
+                sourceLabel={pr.sourceBranch}
+                targetLabel={pr.targetBranch}
+                busy={busy}
+                submitLabel="Valider la résolution"
+                resultHint="sera envoyé à Azure"
+                onSubmit={submit}
+              />
               <div className="resolver-foot">
                 <span className="muted small">
                   <span className="mono">{current.path}</span> · l'encodage et le BOM du fichier sont conservés.
@@ -295,9 +241,6 @@ export function Conflicts({ active }: { active: boolean }) {
                 <span className="spacer" />
                 <button className="btn" onClick={() => setCurrent(null)}>
                   Annuler
-                </button>
-                <button className="btn btn-primary" disabled={busy} onClick={submit}>
-                  {busy ? 'Envoi…' : 'Valider la résolution'}
                 </button>
               </div>
             </>

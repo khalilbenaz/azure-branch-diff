@@ -12,7 +12,7 @@ import { listLocalFiles } from '../../src/main/local/listFiles';
 import { compareLocalToAzure } from '../../src/main/compare/compareLocal';
 import { createHandlers } from '../../src/main/ipc';
 import { AuthStore } from '../../src/main/auth';
-import { tempDir, reverseCipher } from './helpers';
+import { tempDir, reverseCipher, gitDir, worktreeSide } from './helpers';
 
 const NEW_PR = { source: 'feature/data', target: 'master', title: 't', description: '', workItemIds: [] as number[] };
 
@@ -55,7 +55,7 @@ test('m7: hashing many files with long paths works (stdin, no command-line limit
 
 test('m8: a file named "..foo" is readable; a symlink escaping the folder is refused', async () => {
   const outside = tempDir({ 'secret.txt': 'secret' });
-  const root = tempDir({ '..foo': 'ok\n' });
+  const root = gitDir({ '..foo': 'ok\n' });
   // Sous Windows, créer un lien symbolique demande des droits administrateur : on teste alors le reste.
   const canLink = process.platform !== 'win32';
   if (canLink) symlinkSync(join(outside, 'secret.txt'), join(root, 'link.txt'));
@@ -63,10 +63,10 @@ test('m8: a file named "..foo" is readable; a symlink escaping the folder is ref
   await api.login('https://dev.azure.com/X', 'pat');
   await api.pickFolder();
   const target = { kind: 'azure' as const, project: 'Demo', repoId: 'repo1', branch: 'master' };
-  const ok = await api.fileSides({ kind: 'local', path: root }, target, { path: '..foo', change: 'add', isBinary: false }, { changes: [] });
+  const ok = await api.fileSides(worktreeSide(root), target, { path: '..foo', change: 'add', isBinary: false }, { changes: [] });
   expect(ok.ok && ok.value.right.content).toBe('ok\n');
   if (canLink) {
-    const bad = await api.fileSides({ kind: 'local', path: root }, target, { path: 'link.txt', change: 'add', isBinary: false }, { changes: [] });
+    const bad = await api.fileSides(worktreeSide(root), target, { path: 'link.txt', change: 'add', isBinary: false }, { changes: [] });
     expect(bad.ok).toBe(false);
   }
 });

@@ -2,7 +2,7 @@ import { useEffect, useState, type ReactElement } from 'react';
 import type { ApiError, NamedRef } from '../../../shared/types';
 import { api, asApiError, call } from '../lib/api';
 import { useApp, type Tab } from '../lib/context';
-import { IconCompare, IconConflict, IconLogo, IconPr, IconReload } from '../lib/icons';
+import { IconCompare, IconConflict, IconFolder, IconLogo, IconMerge, IconPr, IconReload } from '../lib/icons';
 
 interface Props {
   tab: Tab;
@@ -16,8 +16,11 @@ interface Props {
 const NAV: { id: Tab; label: string; icon: () => ReactElement }[] = [
   { id: 'compare', label: 'Comparer', icon: IconCompare },
   { id: 'pr', label: 'Pull Request', icon: IconPr },
-  { id: 'conflicts', label: 'Conflits', icon: IconConflict },
+  { id: 'conflicts', label: 'Conflits PR', icon: IconConflict },
+  { id: 'merge', label: 'Merge local', icon: () => <IconMerge /> },
 ];
+
+const folderName = (p: string) => p.split(/[\\/]/).filter(Boolean).pop() ?? p;
 
 export function Sidebar({ tab, onTab, openConflicts, version, onLogout, onError }: Props) {
   const app = useApp();
@@ -62,6 +65,8 @@ export function Sidebar({ tab, onTab, openConflicts, version, onLogout, onError 
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [project]);
 
+  const mergeConflicts = app.merge?.conflicts.filter((c) => !c.resolved).length ?? 0;
+
   return (
     <aside className="side">
       <div className="brand">
@@ -92,7 +97,7 @@ export function Sidebar({ tab, onTab, openConflicts, version, onLogout, onError 
           </button>
         </div>
         <label>
-          Dépôt
+          Dépôt Azure
           <select
             value={app.repo?.repoId ?? ''}
             disabled={!repos.length}
@@ -110,6 +115,14 @@ export function Sidebar({ tab, onTab, openConflicts, version, onLogout, onError 
             ))}
           </select>
         </label>
+        <div className="side-clone">
+          <span>Clone local</span>
+          <button onClick={() => void app.pickClone()} title={app.clone?.root ?? 'Choisir un clone git sur le disque'} aria-label="Clone local">
+            <IconFolder />
+            <span className="name">{app.clone ? folderName(app.clone.root) : 'Choisir un clone…'}</span>
+            {app.clone && <span className="hint">changer</span>}
+          </button>
+        </div>
       </div>
 
       <nav className="nav" role="tablist" aria-orientation="vertical" aria-label="Navigation">
@@ -119,6 +132,8 @@ export function Sidebar({ tab, onTab, openConflicts, version, onLogout, onError 
             {label}
             {id === 'pr' && app.pr && <span className="count">#{app.pr.id}</span>}
             {id === 'conflicts' && !!openConflicts && <span className="count alert">{openConflicts}</span>}
+            {id === 'merge' && app.merge && mergeConflicts > 0 && <span className="count alert">{mergeConflicts}</span>}
+            {id === 'merge' && app.merge && mergeConflicts === 0 && <span className="count">•</span>}
           </button>
         ))}
       </nav>
