@@ -11,6 +11,7 @@ import { Compare } from './pages/Compare';
 import { PullRequest } from './pages/PullRequest';
 import { Conflicts } from './pages/Conflicts';
 import { Merge } from './pages/Merge';
+import { Guide } from './pages/Guide';
 
 const updates = (window as unknown as { updates?: { get(): Promise<{ version: string }> } }).updates;
 
@@ -193,6 +194,9 @@ export default function App() {
           </section>
           <section hidden={tab !== 'merge'} className="page">
             <Merge active={tab === 'merge'} />
+          </section>
+          <section hidden={tab !== 'guide'} className="page">
+            <Guide />
           </section>
         </main>
       </div>

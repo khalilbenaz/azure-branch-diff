@@ -68,3 +68,9 @@ export const IconMerge = ({ size = 18 }: { size?: number }) => (
     <path d="M6 7.2c0 5 6 5 6 9.6M18 7.2c0 5-6 5-6 9.6" />
   </svg>
 );
+export const IconBook = () => (
+  <svg width="18" height="18" viewBox="0 0 24 24" {...base} aria-hidden="true">
+    <path d="M4 5.5A2.5 2.5 0 0 1 6.5 3H20v15H6.5A2.5 2.5 0 0 0 4 20.5z" />
+    <path d="M4 20.5A2.5 2.5 0 0 0 6.5 23H20v-5M8 7h8M8 11h6" />
+  </svg>
+);

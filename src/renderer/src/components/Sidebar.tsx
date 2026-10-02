@@ -2,7 +2,8 @@ import { useEffect, useState, type ReactElement } from 'react';
 import type { ApiError, NamedRef } from '../../../shared/types';
 import { api, asApiError, call } from '../lib/api';
 import { useApp, type Tab } from '../lib/context';
-import { IconCompare, IconConflict, IconFolder, IconLogo, IconMerge, IconPr, IconReload } from '../lib/icons';
+import { ThemeToggle } from './ThemeToggle';
+import { IconBook, IconCompare, IconConflict, IconFolder, IconLogo, IconMerge, IconPr, IconReload } from '../lib/icons';
 
 interface Props {
   tab: Tab;
@@ -21,6 +22,7 @@ const NAV: { id: Tab; label: string; icon: () => ReactElement }[] = [
   { id: 'pr', label: 'Pull Request', icon: IconPr },
   { id: 'conflicts', label: 'Conflits PR', icon: IconConflict },
   { id: 'merge', label: 'Merge local', icon: () => <IconMerge /> },
+  { id: 'guide', label: 'Guide', icon: IconBook },
 ];
 
 const folderName = (p: string) => p.split(/[\\/]/).filter(Boolean).pop() ?? p;
@@ -155,6 +157,7 @@ export function Sidebar({ tab, onTab, openConflicts, version, onLogout, onError,
       </nav>
 
       <div className="side-foot">
+        <ThemeToggle className="on-dark" />
         <span>Version {version}</span>
         <div className="row">
           <button onClick={onLogout} title="Ajouter, retirer ou changer d'organisation">

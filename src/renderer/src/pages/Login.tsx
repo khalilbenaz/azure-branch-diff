@@ -3,6 +3,7 @@ import type { ApiError, OrgsState } from '../../../shared/types';
 import { DEFAULT_ORG } from '../../../shared/types';
 import { api, asApiError, call } from '../lib/api';
 import { ErrorBanner } from '../components/ErrorBanner';
+import { ThemeToggle } from '../components/ThemeToggle';
 import { IconLock, IconLogo } from '../lib/icons';
 
 const LAST_ORG_KEY = 'abd.lastOrg';
@@ -78,10 +79,17 @@ export function Login({ onLogged }: { onLogged: (orgUrl: string) => void }) {
 
   const submit = (e: FormEvent) => {
     e.preventDefault();
+    // Validation à l'envoi (pas de bouton désactivé) : Entrée fonctionne même si le dernier caractère vient d'être tapé.
+    const data = new FormData(e.currentTarget as HTMLFormElement);
+    const url = String(data.get('org') ?? orgUrl).trim();
+    const typedPat = String(data.get('pat') ?? pat).trim();
+    if (!url) return setError({ code: 'unknown', message: 'Indiquez l’URL de l’organisation.' });
+    if (tokenMode === 'new' && !typedPat) return setError({ code: 'unknown', message: 'Indiquez le Personal Access Token.' });
     void run(async () => {
-      const st = await call(api.addOrgs({ orgUrls: [orgUrl], ...token() }));
-      remember(st.active ?? orgUrl);
-      onLogged(st.active ?? orgUrl);
+      const tok = tokenMode === 'saved' ? { tokenId } : { pat: typedPat, label };
+      const st = await call(api.addOrgs({ orgUrls: [url], ...tok }));
+      remember(st.active ?? url);
+      onLogged(st.active ?? url);
     });
   };
 
@@ -111,7 +119,7 @@ export function Login({ onLogged }: { onLogged: (orgUrl: string) => void }) {
           <div className="brand-mark lg">
             <IconLogo size={24} />
           </div>
-          <strong style={{ color: '#ffffff', fontSize: 18 }}>Azure Branch Diff</strong>
+          <strong style={{ color: 'var(--side-strong)', fontSize: 18 }}>Azure Branch Diff</strong>
         </div>
         <h1>Comparez vos branches. Fusionnez sans cloner.</h1>
         <div className="login-points">
@@ -134,7 +142,11 @@ export function Login({ onLogged }: { onLogged: (orgUrl: string) => void }) {
             </span>
           </div>
         </div>
-        <span className="login-version">Open source (MIT)</span>
+        <div className="login-version row">
+          <span>Open source (MIT)</span>
+          <span className="spacer" />
+          <ThemeToggle className="on-dark" />
+        </div>
       </section>
       <div className="login-form-wrap">
         <div className="login-form">
@@ -187,6 +199,7 @@ export function Login({ onLogged }: { onLogged: (orgUrl: string) => void }) {
               <label>
                 Organisation
                 <input
+                  name="org"
                   className="field-mono"
                   value={orgUrl}
                   onChange={(e) => setOrgUrl(e.target.value)}
@@ -208,7 +221,7 @@ export function Login({ onLogged }: { onLogged: (orgUrl: string) => void }) {
                 <>
                   <label>
                     Personal Access Token
-                    <input type="password" value={pat} onChange={(e) => setPat(e.target.value)} autoFocus={!!orgUrl} />
+                    <input name="pat" type="password" value={pat} onChange={(e) => setPat(e.target.value)} autoFocus={!!orgUrl} />
                   </label>
                   <label>
                     Nom du jeton (facultatif)
@@ -235,7 +248,7 @@ export function Login({ onLogged }: { onLogged: (orgUrl: string) => void }) {
                 </span>
               </div>
               <div className="row">
-                <button className="btn btn-primary" type="submit" disabled={busy || !hasTokenInput || !orgUrl.trim()}>
+                <button className="btn btn-primary" type="submit" disabled={busy}>
                   {busy ? 'Connexion…' : 'Se connecter'}
                 </button>
                 <button className="btn" type="button" disabled={busy || !hasTokenInput} onClick={discover}>

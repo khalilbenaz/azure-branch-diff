@@ -9,8 +9,9 @@ Application de bureau (macOS et Windows) pour **comparer, fusionner et publier**
 - **Pull Request** : créer ou reprendre la PR, régler les conflits dans Azure ou dans l'app, compléter la PR.
 - **Merge local dans toutes les directions** : dans un worktree temporaire (votre copie de travail n'est jamais dans un état de merge), conflits réglés dans l'app, commit, push.
 - **Plusieurs organisations** : un jeton par organisation ou un jeton multi-organisations, bascule depuis la barre latérale.
+- **Thème clair, sombre ou système**, sur toute l'interface ; **guide d'utilisation** intégré (onglet *Guide*).
 
-**Site et téléchargements : https://khalilbenaz.github.io/azure-branch-diff/**
+**Site et téléchargements : https://khalilbenaz.github.io/azure-branch-diff/** · **[Guide d'utilisation](https://khalilbenaz.github.io/azure-branch-diff/guide.html)**
 
 ![Diff entre deux branches : cible à gauche, source à droite](site/img/02-diff.webp)
 
@@ -60,6 +61,8 @@ Les jetons sont chiffrés par le trousseau du système (Keychain, DPAPI), jamais
 
 Dans le diff : à gauche la cible (avant), à droite la source (après) ; **vert** = ce que la source apporte, **rouge** = ce qu'elle retire.
 
+Liste des fichiers : filtre par nom ou extension ; chaque dossier se replie d'un clic (**Tout replier / Tout déplier**).
+
 | Cible ← Source | Comparer | PR Azure | Fusionner (merge local) |
 |---|---|---|---|
 | Azure ← Azure | ✓ | ✓ | worktree, puis push vers la cible |
@@ -77,6 +80,12 @@ Dans le diff : à gauche la cible (avant), à droite la source (après) ; **vert
 ![Merge local : conflits résolus, commit](site/img/07-merge.webp)
 
 Si Azure refuse le push (politique de branche), l'app propose **« Créer une PR à la place »**. Avant chaque push, une **confirmation native** indique le remote et la branche. Un commit de merge non poussé reste conservé dans `refs/abd/merges/`.
+
+### Thème et guide
+
+En bas de la barre latérale (et sur l'écran de connexion) : **Système**, **Clair** ou **Sombre**. Le choix est retenu et s'applique à toute l'interface, éditeur compris. L'onglet **Guide** reprend le [guide d'utilisation](https://khalilbenaz.github.io/azure-branch-diff/guide.html).
+
+![Thème sombre](site/img/10-dark.webp)
 
 ## Sécurité
 

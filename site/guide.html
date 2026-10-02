@@ -1,0 +1,186 @@
+<!doctype html>
+<html lang="fr">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Guide d'utilisation · Azure Branch Diff</title>
+  <meta name="description" content="Guide d'utilisation d'Azure Branch Diff : connexion, organisations, comparaison Cible ← Source, Pull Request, conflits, merge local, thème." />
+  <link rel="icon" href="favicon.png" />
+  <style>
+    :root {
+      --bg: #f6f7f9; --panel: #fff; --panel-2: #eef1f5; --border: #d9dde3; --text: #1d2330; --muted: #5a6172;
+      --accent: #0b66d6; --accent-text: #fff; --add: #116329; --radius: 12px; color-scheme: light;
+    }
+    @media (prefers-color-scheme: dark) {
+      :root { --bg: #111419; --panel: #1a1e25; --panel-2: #222832; --border: #313845; --text: #e5e8ed; --muted: #9aa1b0;
+        --accent: #4d9bff; --accent-text: #0b1220; --add: #56d364; color-scheme: dark; }
+    }
+    * { box-sizing: border-box; }
+    body { margin: 0; background: var(--bg); color: var(--text); font: 16px/1.6 system-ui, -apple-system, "Segoe UI", sans-serif; }
+    a { color: var(--accent); }
+    .wrap { max-width: 1080px; margin: 0 auto; padding: 0 16px; }
+    header.top { display: flex; align-items: center; gap: 12px; padding: 16px 0; }
+    header.top img { width: 32px; height: 32px; }
+    header.top .name { font-weight: 700; }
+    header.top nav { margin-left: auto; display: flex; gap: 16px; font-size: 15px; }
+    header.top nav a { color: var(--muted); text-decoration: none; }
+    header.top nav a:hover { color: var(--text); }
+    .hero { display: grid; grid-template-columns: 1.05fr 1fr; gap: 40px; align-items: center; padding: 40px 0 24px; }
+    .hero h1 { font-size: clamp(32px, 5vw, 48px); line-height: 1.1; margin: 0 0 16px; letter-spacing: -0.02em; }
+    .hero p.lead { font-size: 19px; color: var(--muted); margin: 0 0 24px; }
+    .cta { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; }
+    .btn { display: inline-flex; align-items: center; gap: 8px; padding: 12px 18px; border-radius: 10px; font-weight: 600;
+      text-decoration: none; border: 1px solid var(--border); background: var(--panel); color: var(--text); }
+    .btn.primary { background: var(--accent); border-color: var(--accent); color: var(--accent-text); }
+    .btn:hover { filter: brightness(1.05); }
+    .meta { font-size: 14px; color: var(--muted); margin-top: 12px; }
+    .shot { border-radius: var(--radius); border: 1px solid var(--border); box-shadow: 0 20px 50px rgba(0,0,0,.15); width: 100%; height: auto; display: block; background: var(--panel); }
+    section { padding: 40px 0; }
+    h2 { font-size: 28px; margin: 0 0 20px; letter-spacing: -0.01em; }
+    .grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; }
+    .card { background: var(--panel); border: 1px solid var(--border); border-radius: var(--radius); padding: 20px; }
+    .card h3 { margin: 0 0 6px; font-size: 17px; }
+    .card p { margin: 0; color: var(--muted); font-size: 15px; }
+    .gallery { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
+    figure { margin: 0; }
+    figcaption { font-size: 14px; color: var(--muted); margin-top: 8px; }
+    .downloads { display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; }
+    .downloads .card { display: flex; flex-direction: column; gap: 10px; }
+    .downloads .card .btn { justify-content: center; margin-top: auto; }
+    ol, ul { padding-left: 20px; }
+    li { margin: 4px 0; }
+    code { background: var(--panel-2); padding: 1px 6px; border-radius: 4px; font-size: 14px; word-break: break-word; }
+    pre { background: var(--panel-2); padding: 12px 14px; border-radius: 8px; overflow-x: auto; font-size: 14px; }
+    footer { border-top: 1px solid var(--border); color: var(--muted); font-size: 14px; padding: 24px 0 40px; margin-top: 24px; }
+    .guide { display: grid; grid-template-columns: 220px 1fr; gap: 40px; padding: 24px 0 40px; }
+    .toc { position: sticky; top: 16px; align-self: start; font-size: 15px; }
+    .toc strong { display: block; font-size: 12px; letter-spacing: .06em; text-transform: uppercase; color: var(--muted); margin-bottom: 8px; }
+    .toc ol { list-style: none; padding: 0; margin: 0; }
+    .toc a { display: block; padding: 4px 0; color: var(--text); text-decoration: none; }
+    .toc a:hover { color: var(--accent); }
+    .guide article section { padding: 8px 0 28px; border-bottom: 1px solid var(--border); margin-bottom: 20px; scroll-margin-top: 16px; }
+    .guide article h1 { font-size: clamp(30px, 4.5vw, 42px); margin: 0 0 8px; letter-spacing: -0.02em; }
+    .guide article h2 { font-size: 24px; display: flex; gap: 10px; align-items: baseline; }
+    .guide article h2 .n { font: 600 14px ui-monospace, SFMono-Regular, Menlo, monospace; color: var(--accent); }
+    .guide figure { margin: 16px 0 4px; }
+    .note { background: var(--panel-2); border-radius: 10px; padding: 12px 16px; font-size: 15px; }
+    @media (max-width: 860px) {
+      .guide { grid-template-columns: 1fr; }
+      .toc { position: static; }
+      .hero { grid-template-columns: 1fr; padding-top: 16px; }
+      .grid, .downloads, .gallery { grid-template-columns: 1fr; }
+      header.top nav { display: none; }
+    }
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <header class="top">
+      <a href="index.html"><img src="icon.png" alt="Accueil" /></a>
+      <span class="name">Azure Branch Diff</span>
+      <nav>
+        <a href="index.html#fonctions">Fonctions</a>
+        <a href="guide.html" aria-current="page">Guide</a>
+        <a href="index.html#telecharger">Télécharger</a>
+        <a href="https://github.com/khalilbenaz/azure-branch-diff">GitHub</a>
+      </nav>
+    </header>
+    <div class="guide">
+      <nav class="toc" aria-label="Sommaire">
+        <strong>Sommaire</strong>
+        <ol>
+          <li><a href="#demarrer">Installer et se connecter</a></li>
+          <li><a href="#organisations">Plusieurs organisations</a></li>
+          <li><a href="#comparer">Comparer : Cible ← Source</a></li>
+          <li><a href="#local">Clone local et dossier téléchargé</a></li>
+          <li><a href="#pr">Pull Request et conflits Azure</a></li>
+          <li><a href="#merge">Merge local, dans toutes les directions</a></li>
+          <li><a href="#theme">Thème clair, sombre ou système</a></li>
+          <li><a href="#maj">Mises à jour et sécurité</a></li>
+        </ol>
+      </nav>
+      <article>
+        <h1>Guide d'utilisation</h1>
+        <p class="lead" style="color:var(--muted);font-size:18px">De l'installation au merge, pas à pas.</p>
+        <section id="demarrer">
+          <h2><span class="n">01</span>Installer et se connecter</h2>
+<ol>
+<li>Téléchargez l'installeur depuis la <a href="index.html#telecharger">page d'accueil</a>.<ul>
+<li><b>macOS</b> : glissez l'app dans Applications, puis faites <b>clic droit → Ouvrir</b>.</li>
+<li><b>Windows</b> : au message « Windows a protégé votre ordinateur », choisissez <b>Informations complémentaires → Exécuter quand même</b>.</li></ul></li>
+<li>Dans Azure DevOps, créez un jeton : avatar → <b>Personal access tokens</b> → <b>New Token</b>. Droits : <b>Code — Read &amp; Write</b> et <b>Work Items — Read</b>.</li>
+<li>Dans l'app, saisissez l'URL de l'organisation (<code>https://dev.azure.com/mon-organisation</code>) et le jeton, puis <b>Se connecter</b>.</li>
+<li>Choisissez un <b>projet</b> et un <b>dépôt Azure</b> dans la barre latérale.</li>
+</ol>
+<p class="note">Le jeton est chiffré par le trousseau du système (Keychain sur macOS, DPAPI sur Windows). Il n'est envoyé qu'à Azure DevOps.</p>
+        </section>
+        <section id="organisations">
+          <h2><span class="n">02</span>Plusieurs organisations</h2>
+<ul>
+<li><b>Un jeton par organisation</b> : ajoutez chaque organisation avec son propre PAT.</li>
+<li><b>Un jeton multi-organisation</b> (PAT créé avec « All accessible organizations ») : cliquez sur <b>Découvrir mes organisations</b>, cochez celles à ajouter, puis validez. Pour ajouter une autre organisation avec ce même jeton, choisissez <b>Jeton enregistré</b>.</li>
+<li>Une fois connecté, changez d'organisation avec le menu <b>Organisation active</b> de la barre latérale. <b>Organisations…</b> ramène à la liste, où <b>Retirer</b> oublie une organisation. <b>Déconnexion</b> garde les jetons.</li>
+</ul>
+<figure><img class="shot" src="img/08-orgs.webp" width="1400" height="900" loading="lazy" alt="Écran de connexion avec deux organisations enregistrées" /><figcaption>Organisations enregistrées : Ouvrir, Retirer, Ajouter.</figcaption></figure>
+        </section>
+        <section id="comparer">
+          <h2><span class="n">03</span>Comparer : Cible ← Source</h2>
+<p>Ce qui est à gauche s'affiche à gauche. Dans la barre d'outils, la <b>Cible</b> est à gauche et la <b>Source</b> à droite ; le diff garde le même ordre. Le bouton ⇄ échange les deux côtés.</p>
+<p>Chaque côté est <b>Azure</b> (une branche du dépôt) ou <b>Local</b>. En local, vous choisissez une branche du clone, une branche <code>origin/*</code> ou la <b>copie de travail</b>, modifications non commitées comprises.</p>
+<ul>
+<li><b>Comme une PR</b> : seulement ce que la source apporte depuis l'ancêtre commun.</li>
+<li><b>Tête contre tête</b> : toutes les différences entre les deux états.</li>
+</ul>
+<figure><img class="shot" src="img/02-diff.webp" width="1400" height="900" loading="lazy" alt="Diff côte à côte, cible à gauche et source à droite" /><figcaption>Cible (master) à gauche, source (feature/data) à droite.</figcaption></figure>
+<p>Dans la liste des fichiers, vous pouvez filtrer par nom ou par extension. Cliquez sur un dossier pour le replier, ou utilisez <b>Tout replier</b>.</p>
+<figure><img class="shot" src="img/09-folded.webp" width="1400" height="900" loading="lazy" alt="Liste des fichiers avec le dossier racine replié" /><figcaption>Dossiers repliables, avec le nombre de fichiers.</figcaption></figure>
+        </section>
+        <section id="local">
+          <h2><span class="n">04</span>Clone local et dossier téléchargé</h2>
+<p>Dans la barre latérale, <b>Clone local</b> ouvre un dossier de votre poste. L'app ne lit que les dossiers choisis ainsi.</p>
+<p>Un dossier sans git (une archive ZIP téléchargée depuis Azure, par exemple) fonctionne aussi. Il est comparé fichier par fichier à n'importe quelle branche. Le merge, lui, demande un vrai clone.</p>
+<figure><img class="shot" src="img/06-local.webp" width="1400" height="900" loading="lazy" alt="Comparaison d'une branche Azure et d'un dossier local" /><figcaption>Branche Azure (cible) ← dossier local (source).</figcaption></figure>
+        </section>
+        <section id="pr">
+          <h2><span class="n">05</span>Pull Request et conflits Azure</h2>
+<ol>
+<li><b>Créer / ouvrir la PR</b> crée la PR Source → Cible, ou reprend celle qui existe déjà. Une source locale est d'abord poussée vers origin, après votre confirmation.</li>
+<li>L'onglet <b>Pull Request</b> affiche l'état du merge calculé par Azure. Vous pouvez lier des work items, puis <b>Compléter la PR</b> (merge, squash ou rebase).</li>
+<li>L'onglet <b>Conflits PR</b> liste les conflits. Pour chacun, résolvez-le dans Azure ou dans l'éditeur à trois volets : cible à gauche, source à droite, résultat modifiable.</li>
+</ol>
+<figure><img class="shot" src="img/05-resolver.webp" width="1400" height="900" loading="lazy" alt="Éditeur de résolution de conflit à trois volets" /><figcaption>Résolution dans l'app : garder source, cible, les deux, ou éditer le résultat.</figcaption></figure>
+        </section>
+        <section id="merge">
+          <h2><span class="n">06</span>Merge local, dans toutes les directions</h2>
+<p><b>Fusionner</b> fusionne la source dans la cible avec git, sur votre poste, dans toutes les directions : Azure → Azure, local → Azure, Azure → local, local → local.</p>
+<ol>
+<li>Le merge se fait dans un <b>worktree temporaire</b>. Votre copie de travail n'est pas touchée, sauf si vous la choisissez comme cible et qu'elle est propre.</li>
+<li>S'il y a des conflits, l'onglet <b>Merge local</b> les liste. Un conflit de texte se règle dans l'éditeur. Pour un binaire ou un fichier supprimé d'un côté, choisissez <b>Garder source</b>, <b>Garder cible</b> ou <b>Supprimer le fichier</b>.</li>
+<li>Écrivez le message, puis cliquez sur <b>Valider le commit</b>. Les hooks git ne sont pas exécutés.</li>
+<li>Si la cible est Azure, le commit est poussé après confirmation. Si une politique de branche refuse la poussée, l'app propose de créer une PR à la place. Si la cible est locale, <b>Pousser vers origin</b> est facultatif.</li>
+</ol>
+<figure><img class="shot" src="img/07-merge.webp" width="1400" height="900" loading="lazy" alt="Merge local : conflits résolus et message de commit" /><figcaption>Merge local : conflits, commit, push.</figcaption></figure>
+        </section>
+        <section id="theme">
+          <h2><span class="n">07</span>Thème clair, sombre ou système</h2>
+<p>En bas de la barre latérale (et sur l'écran de connexion), choisissez <b>Système</b>, <b>Clair</b> ou <b>Sombre</b>. Toute l'interface suit ce choix, y compris l'éditeur, et il est retenu d'une session à l'autre.</p>
+<figure><img class="shot" src="img/10-dark.webp" width="1400" height="900" loading="lazy" alt="Interface en thème sombre" /><figcaption>Thème sombre.</figcaption></figure>
+<p>Le guide est aussi disponible dans l'app, onglet <b>Guide</b>.</p>
+        </section>
+        <section id="maj">
+          <h2><span class="n">08</span>Mises à jour et sécurité</h2>
+<ul>
+<li>Sous Windows, une nouvelle version s'installe au redémarrage. Sous macOS, un bandeau propose de la télécharger.</li>
+<li>Toute poussée vers Azure demande une confirmation explicite.</li>
+<li>L'app refuse un dépôt dont la configuration exécute des commandes (filtres, pilotes de merge, hooks).</li>
+</ul>
+        </section>
+      </article>
+    </div>
+    <footer>
+      Azure Branch Diff · licence MIT · <a href="index.html">Accueil</a> · <a href="https://github.com/khalilbenaz/azure-branch-diff/issues">Signaler un problème</a><br />
+      Projet indépendant, non affilié à Microsoft. Azure DevOps est une marque de Microsoft.
+    </footer>
+  </div>
+</body>
+</html>

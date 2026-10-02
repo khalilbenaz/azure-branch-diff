@@ -1,5 +1,5 @@
 import { test, expect, chromium } from '@playwright/test';
-import { spawn, spawnSync } from 'node:child_process';
+import { spawn, spawnSync, type ChildProcess } from 'node:child_process';
 import { existsSync, mkdtempSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
@@ -12,10 +12,18 @@ const exe =
 
 test.skip(!existsSync(exe), 'pas de build packagé');
 
+// Fermé aussi quand le test dépasse son délai (le finally ne s'exécute pas toujours dans ce cas).
+let child: ChildProcess | undefined;
+test.afterEach(() => {
+  child?.kill('SIGKILL');
+  child = undefined;
+});
+
 test('l’app packagée démarre et affiche l’écran de connexion', async () => {
+  test.setTimeout(90_000);
   // Les fuses interdisent --inspect (utilisé par _electron.launch) : on passe par le protocole CDP de Chromium.
   const port = 9300 + Math.floor(Math.random() * 600);
-  const child = spawn(exe, [`--remote-debugging-port=${port}`], {
+  child = spawn(exe, [`--remote-debugging-port=${port}`], {
     env: { ...process.env, AZ_FAKE: '1', ABD_USER_DATA: mkdtempSync(join(tmpdir(), 'abd-pkg-')) },
     stdio: 'ignore',
   });
@@ -38,7 +46,7 @@ test('l’app packagée démarre et affiche l’écran de connexion', async () =
     await expect(page!.getByRole('tab', { name: 'Comparer' })).toBeVisible();
     await browser!.close();
   } finally {
-    child.kill();
+    child?.kill();
   }
 });
 
