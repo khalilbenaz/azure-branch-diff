@@ -10,7 +10,7 @@ import { makeOrigin, git, writeFile, commitFile } from './gitFixtures';
 
 const AZ_MASTER: AzureSource = { kind: 'azure', project: 'Demo', repoId: 'repo1', branch: 'master' };
 const AZ_FEATURE: AzureSource = { kind: 'azure', project: 'Demo', repoId: 'repo1', branch: 'feature/data' };
-const local = (root: string, ref: LocalSide['ref']): LocalSide => ({ kind: 'local', root: realpathSync(root), ref });
+const local = (root: string, ref: LocalSide['ref']): LocalSide => ({ kind: 'local', root: realpathSync.native(root), ref });
 
 test('compareTrees : ajout, suppression, modification, inchangé', () => {
   expect(

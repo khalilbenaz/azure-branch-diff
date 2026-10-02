@@ -9,7 +9,7 @@ import { tempDir } from './helpers';
 test('repoRoot : racine réelle depuis un sous-dossier ; erreur hors git', async () => {
   const { clone } = makeOrigin();
   mkdirSync(join(clone, 'src', 'deep'), { recursive: true });
-  expect(await repoRoot(join(clone, 'src', 'deep'))).toBe(realpathSync(clone));
+  expect(await repoRoot(join(clone, 'src', 'deep'))).toBe(realpathSync.native(clone));
   await repoRoot(tempDir()).then(
     () => expect.unreachable(),
     (e) => expect(normalizeError(e).message).toMatch(/pas un dépôt git/),
