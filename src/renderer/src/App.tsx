@@ -26,6 +26,15 @@ export default function App() {
   const [openConflicts, setOpenConflicts] = useState<number | null>(null);
   const [version, setVersion] = useState('');
   const [shellError, setShellError] = useState<ApiError | null>(null);
+  const [orgs, setOrgs] = useState<string[]>([]);
+
+  useEffect(() => {
+    if (!orgUrl) return;
+    void call(api.orgs()).then(
+      (st) => setOrgs(st.orgs.map((o) => o.orgUrl)),
+      () => setOrgs([]),
+    );
+  }, [orgUrl]);
 
   useEffect(() => {
     void updates
@@ -124,6 +133,22 @@ export default function App() {
     );
   }
 
+  /** Bascule d'organisation : le dépôt, la sélection et la PR sont remis à zéro ; le clone local est gardé. */
+  async function switchOrg(url: string) {
+    if (url === orgUrl) return;
+    try {
+      const r = await call(api.connectOrg(url));
+      setSelection(null);
+      setPr(null);
+      setRepo(null);
+      setTab('compare');
+      setOrgUrl(r.orgUrl);
+    } catch (e) {
+      const err = asApiError(e);
+      if (!state?.handleAuth(err)) setShellError(err);
+    }
+  }
+
   async function logout() {
     await api.logout();
     setSelection(null);
@@ -138,6 +163,7 @@ export default function App() {
     <AppCtx.Provider value={state}>
       <div className="shell">
         <Sidebar
+          key={state.orgUrl}
           tab={tab}
           onTab={setTab}
           openConflicts={pr ? openConflicts : null}
@@ -146,6 +172,8 @@ export default function App() {
           onError={(e) => {
             if (!state.handleAuth(e)) setShellError(e);
           }}
+          orgs={orgs}
+          onSwitchOrg={switchOrg}
         />
         <main className="main">
           {shellError && (

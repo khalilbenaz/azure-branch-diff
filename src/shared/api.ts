@@ -7,7 +7,9 @@ import type {
   NamedRef,
   PrSummary,
   Resolution,
+  AddOrgsInput,
   LocalRepoInfo,
+  OrgsState,
   MergeResolution,
   MergeStartInput,
   MergeState,
@@ -51,7 +53,16 @@ export interface RepoRef {
 export interface Api {
   session(): Promise<Result<{ orgUrl: string } | null>>;
   login(orgUrl: string, pat: string): Promise<Result<{ orgUrl: string }>>;
+  /** Déconnexion : retour à la liste des organisations, rien n'est oublié. */
   logout(): Promise<Result<void>>;
+  orgs(): Promise<Result<OrgsState>>;
+  /** Bascule vers une organisation enregistrée (refusée pendant un merge local en cours). */
+  connectOrg(orgUrl: string): Promise<Result<{ orgUrl: string }>>;
+  addOrgs(input: AddOrgsInput): Promise<Result<OrgsState>>;
+  /** Organisations accessibles avec un jeton (nouveau PAT ou jeton enregistré). */
+  discoverOrgs(input: { pat: string } | { tokenId: string }): Promise<Result<string[]>>;
+  /** Retire une organisation (son jeton est oublié s'il ne sert plus). */
+  removeOrg(orgUrl: string): Promise<Result<OrgsState>>;
   projects(): Promise<Result<NamedRef[]>>;
   repos(project: string): Promise<Result<NamedRef[]>>;
   branches(project: string, repoId: string): Promise<Result<string[]>>;
@@ -96,6 +107,11 @@ export const API_METHODS = [
   'session',
   'login',
   'logout',
+  'orgs',
+  'connectOrg',
+  'addOrgs',
+  'discoverOrgs',
+  'removeOrg',
   'projects',
   'repos',
   'branches',

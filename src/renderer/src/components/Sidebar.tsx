@@ -11,6 +11,9 @@ interface Props {
   version: string;
   onLogout(): void;
   onError(e: ApiError): void;
+  /** Organisations enregistrées (bascule). */
+  orgs: string[];
+  onSwitchOrg(orgUrl: string): void;
 }
 
 const NAV: { id: Tab; label: string; icon: () => ReactElement }[] = [
@@ -22,7 +25,7 @@ const NAV: { id: Tab; label: string; icon: () => ReactElement }[] = [
 
 const folderName = (p: string) => p.split(/[\\/]/).filter(Boolean).pop() ?? p;
 
-export function Sidebar({ tab, onTab, openConflicts, version, onLogout, onError }: Props) {
+export function Sidebar({ tab, onTab, openConflicts, version, onLogout, onError, orgs, onSwitchOrg }: Props) {
   const app = useApp();
   const [projects, setProjects] = useState<NamedRef[]>([]);
   const [project, setProject] = useState('');
@@ -78,6 +81,19 @@ export function Sidebar({ tab, onTab, openConflicts, version, onLogout, onError 
           <span title={app.orgUrl}>{app.orgUrl.replace(/^https:\/\//, '')}</span>
         </div>
       </div>
+
+      {orgs.length > 1 && (
+        <label className="side-org">
+          Organisation
+          <select value={app.orgUrl} onChange={(e) => onSwitchOrg(e.target.value)} aria-label="Organisation active">
+            {orgs.map((o) => (
+              <option key={o} value={o}>
+                {o.replace(/^https:\/\/(dev\.azure\.com\/)?/, '')}
+              </option>
+            ))}
+          </select>
+        </label>
+      )}
 
       <div className="side-fields">
         <div className="row">
@@ -140,7 +156,12 @@ export function Sidebar({ tab, onTab, openConflicts, version, onLogout, onError 
 
       <div className="side-foot">
         <span>Version {version}</span>
-        <button onClick={onLogout}>Déconnexion</button>
+        <div className="row">
+          <button onClick={onLogout} title="Ajouter, retirer ou changer d'organisation">
+            Organisations…
+          </button>
+          <button onClick={onLogout}>Déconnexion</button>
+        </div>
       </div>
     </aside>
   );

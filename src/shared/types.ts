@@ -94,6 +94,15 @@ export interface ApiError {
 
 export type Result<T> = { ok: true; value: T } | { ok: false; error: ApiError };
 
+/** Organisations enregistrées (jamais de PAT). */
+export interface OrgsState {
+  orgs: { orgUrl: string; tokenId: string; tokenLabel: string }[];
+  tokens: { id: string; label: string; orgCount: number }[];
+  active: string | null;
+}
+/** Ajout d'organisations : avec un nouveau PAT (étiqueté) ou un jeton déjà enregistré. */
+export type AddOrgsInput = { orgUrls: string[] } & ({ pat: string; label?: string } | { tokenId: string });
+
 export const MAX_DIFF_BYTES = 2 * 1024 * 1024;
 export const DEFAULT_ORG = '';
 
