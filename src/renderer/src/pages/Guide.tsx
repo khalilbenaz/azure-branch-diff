@@ -69,10 +69,12 @@ const SECTIONS: Section[] = [
         <p>Le mode de comparaison change ce qui est montré :</p>
         <ul>
           <li>
-            <strong>Comme une PR</strong> : seulement ce que la source apporte depuis l’ancêtre commun ;
+            <strong>Comme une PR</strong> : seulement ce que la source apporte depuis l’ancêtre commun. La gauche montre alors cet ancêtre, pas l’état
+            actuel de la cible : un bandeau le signale, avec un bouton pour voir la cible actuelle ;
           </li>
           <li>
-            <strong>Tête contre tête</strong> : toutes les différences entre les deux états.
+            <strong>Tête contre tête</strong> : l’état actuel de la cible contre celui de la source. À choisir quand les branches sont fusionnées en
+            squash, ou pour savoir exactement ce qui diffère aujourd’hui.
           </li>
         </ul>
         <p>
@@ -117,8 +119,8 @@ const SECTIONS: Section[] = [
             cible et qu’elle est propre.
           </li>
           <li>
-            S’il y a des conflits, l’onglet <strong>Merge local</strong> les liste. Pour un conflit de texte, utilisez l’éditeur. Pour un binaire
-            ou un fichier supprimé d’un côté, choisissez <em>Garder source</em>, <em>Garder cible</em> ou <em>Supprimer le fichier</em>.
+            S’il y a des conflits, l’onglet <strong>Merge local</strong> les liste. Pour un conflit de texte, utilisez l’éditeur. Pour un binaire ou
+            un fichier supprimé d’un côté, choisissez <em>Garder source</em>, <em>Garder cible</em> ou <em>Supprimer le fichier</em>.
           </li>
           <li>
             Écrivez le message puis cliquez sur <em>Valider le commit</em>. Les hooks git ne sont pas exécutés.

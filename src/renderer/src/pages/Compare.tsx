@@ -7,7 +7,7 @@ import { azureFileBranch } from '../lib/prLogic';
 import { mergeInput, sideLabel } from '../lib/sides';
 import { useApp } from '../lib/context';
 import { ErrorBanner } from '../components/ErrorBanner';
-import { SourcePicker, type PickerValue } from '../components/SourcePicker';
+import { MODE_EVENT, SourcePicker, type PickerValue } from '../components/SourcePicker';
 import { FileTree, type LineCounts } from '../components/FileTree';
 import { DiffView } from '../components/DiffView';
 
@@ -154,8 +154,19 @@ export function Compare() {
     setCounts({});
   }, [app.repo?.repoId, app.clone?.root]);
 
-  const label = (s: Side, base?: boolean) =>
-    `${badge(s)} · ${sideLabel(s, app.clone, base ? 'cible' : 'source')}${base && picked?.mode === 'mergeBase' && result?.kind !== 'mixed' ? ' · ancêtre commun' : ''}`;
+  const short = (sha?: string) => (sha && /^[0-9a-f]{7,}$/i.test(sha) ? sha.slice(0, 7) : '');
+  const ancestor = picked?.mode === 'mergeBase' && result?.kind !== 'mixed';
+  // Mode PR : la gauche est l'ancêtre commun ; s'il diffère de la tête de la cible, la cible a avancé depuis.
+  const behind = ancestor && !!result?.baseCommit && !!result?.targetCommit && result.baseCommit !== result.targetCommit;
+  const label = (s: Side, base?: boolean) => {
+    const sha = base && ancestor ? short(result?.baseCommit) : '';
+    return `${badge(s)} · ${sideLabel(s, app.clone, base ? 'cible' : 'source')}${base && ancestor ? ` · ancêtre commun${sha ? ` (${sha})` : ''}` : ''}`;
+  };
+  const showCurrentTarget = () => {
+    if (!picked) return;
+    window.dispatchEvent(new CustomEvent(MODE_EVENT, { detail: 'tips' }));
+    void runCompare({ ...picked, mode: 'tips' });
+  };
   const leftLabel = picked ? label(picked.target, true) : '';
   const rightLabel = picked ? label(picked.source) : '';
   const step = !app.repo && !app.clone ? 1 : 2;
@@ -166,6 +177,20 @@ export function Compare() {
       {error && (
         <div className="pad" style={{ paddingBottom: 0 }}>
           <ErrorBanner error={error} onRetry={() => lastRun.current()} onClose={() => setError(null)} />
+        </div>
+      )}
+      {result && picked && behind && (
+        <div className="ancestor-note" role="note">
+          <span>
+            À gauche : l’<strong>ancêtre commun</strong>
+            {short(result.baseCommit) ? ` (${short(result.baseCommit)})` : ''}, pas l’état actuel de{' '}
+            <strong>{picked.target.kind === 'azure' ? picked.target.branch : sideLabel(picked.target, app.clone, 'cible')}</strong>. Vous voyez ce que
+            la source apporte depuis ce point (comme une PR) ; après des merges en squash, des changements déjà présents dans la cible peuvent
+            réapparaître.
+          </span>
+          <button className="btn" onClick={showCurrentTarget} disabled={busy}>
+            Voir l’état actuel de {picked.target.kind === 'azure' ? picked.target.branch : 'la cible'}
+          </button>
         </div>
       )}
       {result && picked ? (
