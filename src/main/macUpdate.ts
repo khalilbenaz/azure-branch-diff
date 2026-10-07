@@ -1,6 +1,6 @@
 import { createHash } from 'node:crypto';
 import { createWriteStream } from 'node:fs';
-import { access, constants, mkdtemp, writeFile } from 'node:fs/promises';
+import { access, constants, mkdtemp, readdir, rm, writeFile } from 'node:fs/promises';
 import { basename, dirname, isAbsolute, join } from 'node:path';
 
 /** Fichier d'une version, tel que listé par latest-mac.yml (electron-updater). */
@@ -68,6 +68,18 @@ export function pickZip(files: UpdateFile[] | undefined, arch: string): UpdateFi
   return f;
 }
 
+/**
+ * Exigence de signature de l'app installée, si elle est signée par un certificat
+ * (« identifier … and certificate root = H"…" »). Signature ad hoc : null (rien à imposer).
+ */
+export async function designatedRequirement(d: Pick<MacInstallerDeps, 'run'>, bundle: string): Promise<string | null> {
+  // codesign écrit cette information sur stderr : « -r- » la renvoie sur stdout.
+  const out = await d.run('/usr/bin/codesign', ['-d', '-r-', bundle]).catch(() => '');
+  const m = /designated => (.+)/.exec(out);
+  const req = m?.[1].trim() ?? '';
+  return /certificate (root|leaf) = H"[0-9a-f]{40}"/.test(req) ? req : null;
+}
+
 export function createMacInstaller(d: MacInstallerDeps): MacInstaller {
   if (!isAbsolute(d.bundlePath) || !d.bundlePath.endsWith('.app')) throw new Error('Emplacement de l’app inattendu.');
   let ready: { app: string; dir: string } | null = null;
@@ -108,6 +120,9 @@ export function createMacInstaller(d: MacInstallerDeps): MacInstaller {
       if (id !== d.bundleId) throw new Error('Identifiant d’application inattendu : mise à jour refusée.');
       if (version !== info.version) throw new Error('Numéro de version inattendu : mise à jour refusée.');
       await d.run('/usr/bin/codesign', ['--verify', '--deep', app]);
+      // App signée par le certificat du projet : la mise à jour doit l'être par le même certificat.
+      const req = await designatedRequirement(d, d.bundlePath);
+      if (req) await d.run('/usr/bin/codesign', ['--verify', '--deep', `-R=${req}`, app]);
       await d.run('/usr/bin/xattr', ['-dr', 'com.apple.quarantine', app]).catch(() => '');
       progress(100);
       ready = { app, dir };
@@ -129,4 +144,12 @@ export function createMacInstaller(d: MacInstallerDeps): MacInstaller {
       return true;
     },
   };
+}
+
+/** Restes de téléchargements précédents (zip et bundle décompressé) : supprimés au démarrage. */
+export async function cleanupUpdateDirs(tmpDir: string): Promise<void> {
+  const names = await readdir(tmpDir).catch(() => [] as string[]);
+  await Promise.all(
+    names.filter((n) => /^abd-update-[A-Za-z0-9]{6}$/.test(n)).map((n) => rm(join(tmpDir, n), { recursive: true, force: true }).catch(() => {})),
+  );
 }

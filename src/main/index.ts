@@ -10,7 +10,7 @@ import { createAzureContext } from './azure/client';
 import { fakeContext } from './azure/fake';
 import { createHandlers } from './ipc';
 import { createUpdater } from './updater';
-import { createMacInstaller, type MacInstaller } from './macUpdate';
+import { cleanupUpdateDirs, createMacInstaller, type MacInstaller } from './macUpdate';
 import { SettingsStore, type ThemeSource } from './settings';
 import { isSafeExternalUrl } from './urls';
 
@@ -116,6 +116,7 @@ app.whenReady().then(() => {
   // macOS : l'app installe elle-même ses mises à jour (pas de signature Developer ID pour Squirrel.Mac).
   let mac: MacInstaller | undefined;
   if (process.platform === 'darwin' && app.isPackaged) {
+    void cleanupUpdateDirs(app.getPath('temp'));
     try {
       mac = createMacInstaller({
         arch: process.arch,

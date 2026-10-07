@@ -114,6 +114,8 @@ gh release edit vX.Y.Z --draft=false            # après vérification du brouil
 
 La CI publie la release en **brouillon** (invisible pour les mises à jour automatiques) avec `SHA256SUMS.txt`.
 
+**Signature macOS** : l'app est signée avec un certificat auto-signé du projet (secrets `MAC_CERT_P12`, `MAC_CERT_PASSWORD`, crochet `build/after-sign.cjs`). Son identité reste la même d'une version à l'autre : le trousseau macOS ne redemande pas le mot de passe après une mise à jour, et l'app n'installe qu'une mise à jour signée par ce même certificat. Sans ces secrets (build local, fork), la signature reste ad hoc.
+
 ### Architecture
 
 - `src/main` : processus principal Electron, seul à détenir les jetons.
