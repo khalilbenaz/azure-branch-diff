@@ -69,6 +69,7 @@
       <span class="name">Azure Branch Diff</span>
       <nav>
         <a href="#fonctions">Fonctions</a>
+        <a href="#nouveautes">Nouveautés</a>
         <a href="guide.html">Guide</a>
         <a href="#telecharger">Télécharger</a>
         <a href="#securite">Sécurité</a>
@@ -93,27 +94,40 @@
     <section id="fonctions">
       <h2>Ce que fait l'app</h2>
       <div class="grid">
-        <div class="card"><h3>Diff entre branches</h3><p>Ce qui est à gauche s'affiche à gauche : la cible à gauche, la source à droite. Toujours l'état actuel des deux branches ; en mode PR, seulement ce que la source apporte (les fichiers déjà portés sont masqués).</p></div>
+        <div class="card"><h3>Diff entre branches</h3><p>Ce qui est à gauche s'affiche à gauche : la cible à gauche, la source à droite, toujours dans leur état actuel. « Actualiser » relance la comparaison avec les derniers commits.</p></div>
+        <div class="card"><h3>Seulement ce qui compte</h3><p>Masqués par défaut : les fichiers déjà identiques sur la cible (portés sans merge, cherry-pick, squash) et ceux qui ne diffèrent que par des espaces. Un clic pour les afficher.</p></div>
         <div class="card"><h3>Azure ou local, de chaque côté</h3><p>Branche Azure, branche du clone, <code>origin/*</code>, copie de travail ou simple dossier téléchargé. Respecte <code>.gitignore</code> et <code>core.autocrlf</code>.</p></div>
         <div class="card"><h3>Pull Request en un clic</h3><p>Reprend la PR active si elle existe, lie les work items, attend le calcul du merge, puis complète (merge, squash, rebase).</p></div>
-        <div class="card"><h3>Conflits : vous choisissez</h3><p>Réglez-les dans Azure, ou dans l'app : source, cible et résultat modifiable, « garder source / cible / les deux ».</p></div>
+        <div class="card"><h3>Conflits : vous choisissez</h3><p>Réglez-les dans Azure, ou dans l'app : un conflit à la fois, les deux versions côte à côte, « garder main / dev / les deux », fichier final modifiable.</p></div>
         <div class="card"><h3>Rapide sur les gros dépôts</h3><p>Aucun clone : seuls les fichiers modifiés sont téléchargés. Des milliers de fichiers modifiés restent fluides à parcourir et à filtrer.</p></div>
-        <div class="card"><h3>Merge local, dans tous les sens</h3><p>Azure ou local, de chaque côté. Un parcours guidé en 4 étapes, un conflit à la fois avec les deux versions côte à côte. Votre dossier de travail reste intact.</p></div>
+        <div class="card"><h3>Fusion guidée, dans tous les sens</h3><p>Azure ou local, de chaque côté. 4 étapes visibles : fusion préparée, conflits, enregistrer, envoyer sur Azure. Votre dossier de travail reste intact.</p></div>
         <div class="card"><h3>Plusieurs organisations</h3><p>Un jeton par organisation ou un jeton multi-organisations : « Découvrir mes organisations », puis bascule d'un clic dans la barre latérale.</p></div>
         <div class="card"><h3>Clair, sombre ou système</h3><p>Toute l'interface suit le thème choisi, éditeur compris. Guide d'utilisation intégré, dossiers repliables dans la liste des fichiers.</p></div>
-        <div class="card"><h3>Mises à jour automatiques</h3><p>Sous Windows comme sous macOS : la nouvelle version est téléchargée en arrière-plan, vérifiée, puis installée au redémarrage.</p></div>
+        <div class="card"><h3>Mises à jour automatiques</h3><p>Sous Windows comme sous macOS : la nouvelle version est téléchargée en arrière-plan, vérifiée (empreinte, signature), puis installée au redémarrage. Sur Mac, plus de mot de passe du trousseau après une mise à jour.</p></div>
       </div>
+    </section>
+
+    <section id="nouveautes">
+      <h2>Nouveautés</h2>
+      <div class="grid">
+        <div class="card"><h3>1.5 · Fusion guidée</h3><p>Fusion en 4 étapes, un conflit à la fois avec les deux versions côte à côte, en langage simple. « Actualiser » relance la comparaison affichée.</p></div>
+        <div class="card"><h3>1.5 · Mises à jour sur Mac</h3><p>Installation automatique sur macOS aussi, avec vérification de l'empreinte et de la signature ; identité stable, plus de mot de passe du trousseau à chaque version.</p></div>
+        <div class="card"><h3>1.4 · Moins de bruit</h3><p>Les deux volets montrent l'état actuel des branches ; fichiers déjà portés sur la cible et différences d'espaces masqués. Thème clair / sombre, guide intégré, dossiers repliables.</p></div>
+      </div>
+      <p class="meta"><a href="https://github.com/khalilbenaz/azure-branch-diff/releases">Historique complet des versions</a></p>
     </section>
 
     <section>
       <h2>Aperçu</h2>
       <div class="gallery">
+        <figure><img class="shot" src="img/12-hidden.webp" width="1400" height="900" loading="lazy" alt="Bandeau : un fichier qui ne diffère que par des espaces est masqué" /><figcaption>Seulement les vraies différences : espaces et fichiers déjà portés masqués.</figcaption></figure>
         <figure><img class="shot" src="img/06-local.webp" width="1400" height="900" loading="lazy" alt="Comparaison d'un dossier local avec une branche Azure" /><figcaption>Branche Azure (cible) ← dossier local (source).</figcaption></figure>
         <figure><img class="shot" src="img/04-conflicts.webp" width="1400" height="900" loading="lazy" alt="Liste des conflits d'une Pull Request" /><figcaption>Conflits de la PR : Azure ou l'app, au choix.</figcaption></figure>
         <figure><img class="shot" src="img/05-resolver.webp" width="1400" height="900" loading="lazy" alt="Éditeur de résolution de conflit à trois volets" /><figcaption>Résolution : cible, source, résultat modifiable.</figcaption></figure>
-        <figure><img class="shot" src="img/07-merge.webp" width="1400" height="900" loading="lazy" alt="Merge local : conflits résolus, message de commit" /><figcaption>Fusion en 4 étapes : un conflit à la fois (garder main, dev ou les deux), puis enregistrer et envoyer.</figcaption></figure>
+        <figure><img class="shot" src="img/07-merge.webp" width="1400" height="900" loading="lazy" alt="Fusion guidée : étapes et conflit présenté avec les deux versions côte à côte" /><figcaption>Fusion en 4 étapes : un conflit à la fois (garder main, dev ou les deux), puis enregistrer et envoyer.</figcaption></figure>
         <figure><img class="shot" src="img/08-orgs.webp" width="1400" height="900" loading="lazy" alt="Écran de connexion avec plusieurs organisations enregistrées" /><figcaption>Plusieurs organisations, un ou plusieurs jetons.</figcaption></figure>
         <figure><img class="shot" src="img/10-dark.webp" width="1400" height="900" loading="lazy" alt="Interface en thème sombre" /><figcaption>Thème sombre (ou clair, ou celui du système).</figcaption></figure>
+        <figure><img class="shot" src="img/13-update.webp" width="1400" height="900" loading="lazy" alt="Bandeau de mise à jour : nouvelle version prête, redémarrer pour installer" /><figcaption>Mise à jour automatique : prête, il suffit de redémarrer.</figcaption></figure>
         <figure><img class="shot" src="img/11-guide.webp" width="1400" height="900" loading="lazy" alt="Guide d'utilisation intégré à l'app" /><figcaption>Guide d'utilisation intégré. <a href="guide.html">Lire en ligne</a>.</figcaption></figure>
       </div>
     </section>
