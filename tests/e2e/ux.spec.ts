@@ -96,8 +96,8 @@ test('guide d’utilisation : accessible depuis la barre latérale, sommaire nav
   await page.getByRole('tab', { name: 'Guide' }).click();
   await expect(page.getByRole('heading', { level: 1, name: 'Guide d’utilisation' })).toBeVisible();
   const toc = page.getByRole('navigation', { name: 'Sommaire du guide' });
-  await toc.getByRole('link', { name: 'Merge local, dans toutes les directions' }).click();
-  await expect(page.getByRole('heading', { name: /Merge local, dans toutes les directions/ })).toBeInViewport();
+  await toc.getByRole('link', { name: 'Fusionner une branche dans une autre' }).click();
+  await expect(page.getByRole('heading', { name: /Fusionner une branche dans une autre/ })).toBeInViewport();
   await a11y('guide');
   await page.getByRole('tab', { name: 'Comparer' }).click();
   await expect(page.locator('.monaco-diff-editor')).toBeVisible();

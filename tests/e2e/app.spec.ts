@@ -61,8 +61,8 @@ test('connexion, comparaison, diff, PR et conflits', async () => {
   const appButtons = page.getByRole('button', { name: "Régler dans l'app" });
   await expect(appButtons.nth(1)).toBeDisabled();
   await appButtons.first().click();
-  await expect(page.getByText('Résultat (modifiable)')).toBeVisible();
-  await page.getByRole('button', { name: 'Garder source' }).click();
+  await expect(page.getByText('Fichier final', { exact: true })).toBeVisible();
+  await page.getByRole('button', { name: 'Tout prendre de feature/data' }).click();
   await shot('05-resolver');
   await page.getByRole('button', { name: 'Valider la résolution' }).click();
   await expect(page.getByText('Conflit résolu : src/Service.cs')).toBeVisible();

@@ -112,9 +112,18 @@ export function Compare() {
         )
           return;
       }
-      const label = `${sideLabel(v.source, clone)} → ${sideLabel(v.target, clone, 'cible')}`;
-      const then = m.input.target.kind === 'remote' ? `, puis pousser le résultat vers origin/${m.input.target.branch}` : '';
-      if (!window.confirm(`Fusionner ${label} dans un worktree temporaire du clone${then} ?`)) return;
+      const src = sideLabel(v.source, clone).replace(/^origin\//, '');
+      const tgt = sideLabel(v.target, clone, 'cible').replace(/^origin\//, '');
+      const then =
+        m.input.target.kind === 'remote'
+          ? `\n\nUne fois les conflits réglés, la fusion sera envoyée sur Azure (${tgt}), après votre confirmation.`
+          : '';
+      if (
+        !window.confirm(
+          `Fusionner ${src} dans ${tgt} ?\n\nLa fusion est préparée à part dans votre clone : votre dossier de travail n'est pas modifié.${then}`,
+        )
+      )
+        return;
       setBusy(true);
       app.setMerge(await call(api.mergeStart(m.input)));
       app.goTo('merge');

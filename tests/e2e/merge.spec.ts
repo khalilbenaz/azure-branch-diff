@@ -97,24 +97,33 @@ test('merge local → local avec conflit résolu dans l’app, commit puis push'
   await expect(page.getByRole('tab', { name: /Merge local/ })).toHaveAttribute('aria-selected', 'true');
   const list = page.getByRole('list', { name: 'Conflits du merge' });
   await expect(list.getByText('src/Service.cs')).toBeVisible();
-  await expect(page.getByRole('button', { name: 'Valider le commit' })).toBeDisabled();
+  await expect(page.getByRole('button', { name: 'Enregistrer la fusion' })).toBeDisabled();
+  await expect(page.locator('.merge-head')).toContainText('Fusionner feature/data dans release');
+  await expect(page.getByRole('list', { name: 'Étapes de la fusion' }).locator('[aria-current="step"]')).toContainText('Régler les conflits (1)');
   await a11y();
 
-  await list.getByText('src/Service.cs').click();
-  await page.getByRole('button', { name: 'Garder source' }).click();
-  await page.getByRole('button', { name: 'Marquer résolu' }).click();
-  await expect(list.getByText('Résolu', { exact: true })).toBeVisible();
+  // Le premier conflit s'ouvre tout seul, présenté bloc par bloc, sans marqueurs git à éditer.
+  const block = page.getByLabel('Conflit en cours');
+  await expect(block).toContainText('Conflit 1 sur 1');
+  await expect(block).toContainText('Amount = 20');
+  await expect(block).toContainText('Amount = 30');
+  await a11y();
   await page.screenshot({ path: process.env.ABD_SHOTS ? join(process.env.ABD_SHOTS, '07-merge.png') : join(tmpdir(), 'abd-07-merge.png') });
+  await block.getByRole('button', { name: 'Garder feature/data' }).click();
+  await expect(page.getByText('Tous les conflits de ce fichier sont réglés.')).toBeVisible();
+  await page.getByRole('button', { name: 'Valider ce fichier' }).click();
+  await expect(list.getByText('✓ Réglé')).toBeVisible();
 
-  await page.getByRole('button', { name: 'Valider le commit' }).click();
-  await expect(page.getByText('Merge commité.')).toBeVisible();
+  await page.getByRole('button', { name: 'Enregistrer la fusion' }).click();
+  await expect(page.getByText('✓ feature/data est fusionné dans release.')).toBeVisible();
+  await expect(page.getByText(/pas encore sur Azure/)).toBeVisible();
   expect(git(clone, 'show', 'release:src/Service.cs')).toContain('Amount = 30');
   expect(git(clone, 'log', '-1', '--format=%s', 'release')).toBe('Merge feature/data into release');
   expect(git(clone, 'status', '--porcelain')).toBe(''); // copie de travail intacte
 
-  await page.getByRole('button', { name: /Pousser vers origin\/release/ }).click();
-  await expect(page.getByText('Merge commité et poussé.')).toBeVisible();
+  await page.getByRole('button', { name: 'Envoyer release sur Azure' }).click();
+  await expect(page.getByText(/envoyée sur Azure/)).toBeVisible();
   expect(git(bare, 'rev-parse', 'release')).toBe(git(clone, 'rev-parse', 'release'));
   await page.getByRole('button', { name: 'Terminer' }).click();
-  await expect(page.getByText('Aucun merge local en cours')).toBeVisible();
+  await expect(page.getByText('Aucune fusion en cours')).toBeVisible();
 });
