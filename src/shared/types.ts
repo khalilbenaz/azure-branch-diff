@@ -33,6 +33,8 @@ export interface ChangeEntry {
   removed?: number;
   /** Mode PR : le fichier est déjà identique sur la cible (porté sans merge, cherry-pick, squash). */
   inTarget?: boolean;
+  /** Les deux versions ne diffèrent que par des espaces (indentation, lignes vides, fins de ligne). */
+  whitespaceOnly?: boolean;
 }
 
 export interface FileSide {

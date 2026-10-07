@@ -21,6 +21,8 @@ export type LineCounts = Record<string, { added: number; removed: number }>;
 
 interface Props {
   changes: ChangeEntry[];
+  /** Change quand la comparaison change : réinitialise dossiers repliés et pagination (sinon : `changes`). */
+  resetKey?: unknown;
   counts: LineCounts;
   selected: string | null;
   onSelect(e: ChangeEntry): void;
@@ -34,7 +36,8 @@ const extOf = (p: string) => {
 const dirOf = (p: string) => (p.includes('/') ? p.slice(0, p.lastIndexOf('/')) : '');
 const nameOf = (p: string) => p.split('/').pop() ?? p;
 
-export function FileTree({ changes, counts, selected, onSelect }: Props) {
+export function FileTree({ changes, resetKey, counts, selected, onSelect }: Props) {
+  const listKey = resetKey ?? changes;
   const [query, setQuery] = useState('');
   const [ext, setExt] = useState('');
   const deferredQuery = useDeferredValue(query);
@@ -43,20 +46,20 @@ export function FileTree({ changes, counts, selected, onSelect }: Props) {
     key: [],
     limit: CHUNK,
   });
-  const key = [changes, deferredQuery, ext];
+  const key = [listKey, deferredQuery, ext];
   const sameKey = paging.key.length === key.length && paging.key.every((k, i) => k === key[i]);
   const limit = sameKey ? paging.limit : CHUNK;
   // Dossiers repliés, réinitialisés quand la liste des changements change.
-  const [folded, setFolded] = useState<{ changes: ChangeEntry[]; dirs: Set<string> }>({
-    changes,
+  const [folded, setFolded] = useState<{ key: unknown; dirs: Set<string> }>({
+    key: listKey,
     dirs: new Set(),
   });
-  const collapsed = folded.changes === changes ? folded.dirs : new Set<string>();
+  const collapsed = folded.key === listKey ? folded.dirs : new Set<string>();
   const toggleDir = (dir: string) => {
     const next = new Set(collapsed);
     if (next.has(dir)) next.delete(dir);
     else next.add(dir);
-    setFolded({ changes, dirs: next });
+    setFolded({ key: listKey, dirs: next });
   };
 
   const extensions = useMemo(() => [...new Set(changes.map((c) => extOf(c.path)).filter(Boolean))].sort(), [changes]);
@@ -88,7 +91,7 @@ export function FileTree({ changes, counts, selected, onSelect }: Props) {
   }, [counts]);
 
   const allFolded = groups.dirs.length > 0 && groups.dirs.every(([d]) => collapsed.has(d));
-  const foldAll = () => setFolded({ changes, dirs: allFolded ? new Set() : new Set(groups.dirs.map(([d]) => d)) });
+  const foldAll = () => setFolded({ key: listKey, dirs: allFolded ? new Set() : new Set(groups.dirs.map(([d]) => d)) });
 
   const summary = useMemo(() => {
     const s = { add: 0, edit: 0, delete: 0, rename: 0 };
@@ -187,6 +190,11 @@ export function FileTree({ changes, counts, selected, onSelect }: Props) {
                             {BADGE[c.change]}
                           </span>
                           <span className="tree-name">{nameOf(c.path)}</span>
+                          {c.whitespaceOnly && !c.inTarget && (
+                            <span className="tree-tag" title="Seuls les espaces changent : indentation, lignes vides, fins de ligne">
+                              espaces seulement
+                            </span>
+                          )}
                           {c.inTarget && (
                             <span className="tree-tag" title="Déjà identique sur la cible : rien à apporter">
                               déjà dans la cible

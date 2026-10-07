@@ -61,7 +61,7 @@ Les jetons sont chiffrés par le trousseau du système (Keychain, DPAPI), jamais
 
 Dans le diff : à gauche la cible, à droite la source, toujours dans leur **état actuel** ; **vert** = ce que la source apporte, **rouge** = ce qu'elle retire.
 
-Liste des fichiers : filtre par nom ou extension ; chaque dossier se replie d'un clic (**Tout replier / Tout déplier**).
+Liste des fichiers : les fichiers qui ne diffèrent que par des espaces (indentation, lignes vides, CRLF / LF) sont masqués, comme ceux déjà identiques sur la cible ; filtre par nom ou extension ; chaque dossier se replie d'un clic (**Tout replier / Tout déplier**).
 
 | Cible ← Source | Comparer | PR Azure | Fusionner (merge local) |
 |---|---|---|---|

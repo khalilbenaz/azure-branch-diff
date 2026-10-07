@@ -10,6 +10,7 @@ import { EMPTY_SIDE, getFileSide, listBranchChanges, listTree, toFileSide } from
 import { completePr, createPr, fileWebUrl, findActivePr, getPr, prConflictsUrl, waitMergeStatus } from './azure/pr';
 import { getConflictSides, listConflicts, resolveConflict } from './azure/conflicts';
 import { compareSides, sidesContent } from './compare/compareSides';
+import { whitespaceOnlyPaths } from './compare/whitespace';
 import { inspectFolder, refSpec, repoInfo } from './local/repo';
 import { insideGitRepo } from './local/safeGit';
 import { MergeSession } from './merge/session';
@@ -312,6 +313,19 @@ export function createHandlers(deps: HandlerDeps): Api {
         for (const s of [source, target]) if (s.kind === 'local') insideRoot(s.root, entry.path);
         for (const s of [source, target]) if (s.kind === 'local') await assertSafeRepo(s.root, 'read');
         return sidesContent(session?.ctx ?? null, source, target, entry, commits(cmpArg));
+      }),
+
+    whitespaceOnly: (src, tgt, es, cmpArg) =>
+      wrap(async () => {
+        const [source, target] = [side(src), side(tgt)];
+        if (!Array.isArray(es) || es.length > 100) throw { code: 'unknown', message: 'Liste de fichiers invalide.' };
+        const entries = es.map(changeEntry);
+        for (const s of [source, target])
+          if (s.kind === 'local') {
+            for (const e of entries) insideRoot(s.root, e.path);
+            await assertSafeRepo(s.root, 'read');
+          }
+        return whitespaceOnlyPaths(session?.ctx ?? null, source, target, entries, commits(cmpArg));
       }),
 
     findPr: (r, src, tgt) =>

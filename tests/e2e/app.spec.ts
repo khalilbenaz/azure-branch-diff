@@ -123,3 +123,25 @@ test('dossier téléchargé sans git : ouvert sans erreur et comparé à une bra
   await page.getByRole('button', { name: /Service\.cs/ }).click();
   await expect(page.locator('.monaco-diff-editor')).toBeVisible();
 });
+
+test('fichiers qui ne diffèrent que par des espaces : masqués, affichables', async () => {
+  const dir = mkdtempSync(join(tmpdir(), 'abd-ws-'));
+  mkdirSync(join(dir, 'src'));
+  writeFileSync(join(dir, 'src/Service.cs'), 'vraiment différent\n');
+  writeFileSync(join(dir, 'old.sql'), '\n   select    1;\r\n\r\n'); // master : « select 1;\n »
+  await app.evaluate(({ dialog }, folder) => {
+    dialog.showOpenDialog = async () => ({ canceled: false, filePaths: [folder] });
+  }, dir);
+  await page.getByRole('tab', { name: 'Comparer' }).click();
+  await page.getByRole('button', { name: 'Clone local' }).click();
+  await expect(page.getByRole('button', { name: 'Clone local' })).toContainText(basename(realpathSync.native(dir)));
+  await page.getByLabel('Référence source').selectOption('worktree');
+  await page.getByRole('button', { name: 'Comparer', exact: true }).click();
+  const note = page.getByRole('note');
+  await expect(note).toContainText('1 fichier qui ne diffère que par des espaces');
+  await expect(page.getByRole('button', { name: /old\.sql/ })).toHaveCount(0);
+  await expect(page.getByRole('button', { name: /Service\.cs/ })).toBeVisible();
+  await note.getByRole('button', { name: 'Afficher' }).click();
+  await expect(page.getByRole('button', { name: /old\.sql/ })).toContainText('espaces seulement');
+  await note.getByRole('button', { name: 'Masquer' }).click();
+});

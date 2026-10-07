@@ -67,18 +67,23 @@ const SECTIONS: Section[] = [
         </ul>
         <p>Vous pouvez donc comparer Azure ↔ Azure, Azure ↔ local ou local ↔ local, entre n’importe quelles branches.</p>
         <p>
-          Dans tous les cas, les deux volets du diff montrent l’<strong>état actuel</strong> des branches. Le mode change seulement la liste
-          des fichiers :
+          Dans tous les cas, les deux volets du diff montrent l’<strong>état actuel</strong> des branches. Le mode change seulement la liste des
+          fichiers :
         </p>
         <ul>
           <li>
-            <strong>Comme une PR</strong> : la liste ne contient que ce que la source apporte à la cible. Les fichiers déjà identiques sur
-            la cible (portés sans merge, cherry-pick, squash) sont masqués ; un bandeau permet de les afficher ;
+            <strong>Comme une PR</strong> : la liste ne contient que ce que la source apporte à la cible. Les fichiers déjà identiques sur la cible
+            (portés sans merge, cherry-pick, squash) sont masqués ; un bandeau permet de les afficher ;
           </li>
           <li>
             <strong>Tête contre tête</strong> : toutes les différences entre les deux branches.
           </li>
         </ul>
+        <p>
+          Les fichiers qui ne diffèrent que par des <strong>espaces</strong> (indentation, lignes vides, espaces de fin de ligne, CRLF / LF) sont
+          aussi masqués. L’analyse se fait en arrière-plan juste après la comparaison ; le bandeau indique sa progression et permet d’afficher ces
+          fichiers.
+        </p>
         <p>
           Dans la liste des fichiers, filtrez par nom ou par extension. Cliquez sur un dossier pour le replier, ou utilisez <em>Tout replier</em>. Le
           diff s’affiche côte à côte ou en vue unifiée.
