@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { REFRESH_EVENT } from './Sidebar';
 import type { ApiError, Side } from '../../../shared/types';
 import { api, asApiError, call } from '../lib/api';
 import { useApp } from '../lib/context';
@@ -104,6 +105,9 @@ function SideCard({ role, draft, onDraft, branches }: SideCardProps) {
   );
 }
 
+/** Diffusé par la page Comparer pour changer le mode de comparaison affiché. */
+export const MODE_EVENT = 'abd:mode';
+
 /** Barre d'outils : Cible ← Source (Azure ou local), mode, Comparer, PR, Fusionner. */
 export function SourcePicker({ busy, onCompare, onError, onPr, onMerge }: Props) {
   const app = useApp();
@@ -131,6 +135,39 @@ export function SourcePicker({ busy, onCompare, onError, onPr, onMerge }: Props)
       })();
     return () => {
       stale = true;
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [repo?.repoId]);
+
+  // Bandeau « Voir la cible actuelle » (page Comparer) : bascule le mode affiché.
+  useEffect(() => {
+    const onMode = (e: Event) => setMode((e as CustomEvent<'mergeBase' | 'tips'>).detail);
+    window.addEventListener(MODE_EVENT, onMode);
+    return () => window.removeEventListener(MODE_EVENT, onMode);
+  }, []);
+
+  // « Actualiser » (barre latérale) : relit les branches Azure en gardant les choix encore valides.
+  useEffect(() => {
+    if (!repo) return;
+    let stale = false;
+    const onRefresh = () => {
+      void (async () => {
+        try {
+          const bs = await call(api.branches(repo.project, repo.repoId));
+          if (stale) return;
+          setBranches(bs);
+          const keep = (d: SideDraft): SideDraft => (d.kind === 'azure' && d.branch && !bs.includes(d.branch) ? { kind: 'azure', branch: '' } : d);
+          setSource(keep);
+          setTarget(keep);
+        } catch (e) {
+          onError(asApiError(e));
+        }
+      })();
+    };
+    window.addEventListener(REFRESH_EVENT, onRefresh);
+    return () => {
+      stale = true;
+      window.removeEventListener(REFRESH_EVENT, onRefresh);
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [repo?.repoId]);

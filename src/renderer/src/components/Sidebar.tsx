@@ -25,6 +25,9 @@ const NAV: { id: Tab; label: string; icon: () => ReactElement }[] = [
   { id: 'guide', label: 'Guide', icon: IconBook },
 ];
 
+/** Diffusé par « Actualiser » : la barre d'outils recharge ses branches. */
+export const REFRESH_EVENT = 'abd:refresh';
+
 const folderName = (p: string) => p.split(/[\\/]/).filter(Boolean).pop() ?? p;
 
 export function Sidebar({ tab, onTab, openConflicts, version, onLogout, onError, orgs, onSwitchOrg }: Props) {
@@ -70,6 +73,22 @@ export function Sidebar({ tab, onTab, openConflicts, version, onLogout, onError,
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [project]);
 
+  // « Actualiser » : recharge aussi les dépôts du projet (sélection gardée) et les branches de la barre d'outils.
+  useEffect(() => {
+    if (!reload) return;
+    let stale = false;
+    if (project)
+      void guard(async () => {
+        const rs = await call(api.repos(project));
+        if (!stale) setRepos(rs);
+      });
+    window.dispatchEvent(new Event(REFRESH_EVENT));
+    return () => {
+      stale = true;
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [reload]);
+
   const mergeConflicts = app.merge?.conflicts.filter((c) => !c.resolved).length ?? 0;
 
   return (
@@ -110,7 +129,7 @@ export function Sidebar({ tab, onTab, openConflicts, version, onLogout, onError,
               ))}
             </select>
           </label>
-          <button className="side-reload" title="Actualiser la liste" aria-label="Actualiser la liste" onClick={() => setReload((n) => n + 1)}>
+          <button className="side-reload" title="Actualiser les projets, dépôts et branches" aria-label="Actualiser la liste" onClick={() => setReload((n) => n + 1)}>
             <IconReload />
           </button>
         </div>

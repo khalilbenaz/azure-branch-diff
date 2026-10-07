@@ -60,6 +60,32 @@ test('écran Comparer accessible, avec résultat', async () => {
   await a11y('compare');
 });
 
+test('Actualiser recharge projets, dépôts et branches sans perdre la sélection', async () => {
+  await page.getByRole('button', { name: 'Actualiser la liste' }).click();
+  await page.waitForTimeout(500);
+  await expect(page.getByLabel('Projet')).toHaveValue('Demo');
+  await expect(page.getByLabel('Dépôt')).toHaveValue('repo1');
+  await expect(page.getByLabel('Branche source')).toHaveValue('feature/data');
+  await expect(page.getByRole('button', { name: 'Comparer', exact: true })).toBeEnabled();
+});
+
+test('mode PR : bandeau « ancêtre commun » et bascule en un clic vers la cible actuelle', async () => {
+  const note = page.getByRole('note');
+  await expect(note).toContainText('ancêtre commun');
+  await expect(page.getByText('Azure · master · ancêtre commun')).toBeVisible();
+  await a11y('ancestor-note');
+  await note.getByRole('button', { name: 'Voir l’état actuel de master' }).click();
+  await expect(page.getByRole('button', { name: 'Tête contre tête' })).toHaveAttribute('aria-pressed', 'true');
+  await expect(note).toHaveCount(0);
+  await page.getByRole('button', { name: /Service\.cs/ }).click();
+  await expect(page.getByText('Azure · master', { exact: true })).toBeVisible();
+  // Retour au mode PR pour les tests suivants.
+  await page.getByRole('button', { name: 'Comme une PR' }).click();
+  await page.getByRole('button', { name: 'Comparer', exact: true }).click();
+  await expect(note).toBeVisible();
+  await page.getByRole('button', { name: /Service\.cs/ }).click();
+});
+
 test('liste des fichiers : chaque dossier se replie et se déplie', async () => {
   const src = page.getByRole('button', { name: /^src/ });
   await expect(src).toHaveAttribute('aria-expanded', 'true');
