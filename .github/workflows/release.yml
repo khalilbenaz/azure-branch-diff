@@ -66,6 +66,8 @@ jobs:
           security unlock-keychain -p "$kp" "$kc"
           security import "$RUNNER_TEMP/cert.p12" -k "$kc" -P "$MAC_CERT_PASSWORD" -T /usr/bin/codesign >/dev/null
           security set-key-partition-list -S apple-tool:,apple: -s -k "$kp" "$kc" >/dev/null
+          # codesign ne cherche l'identité que dans les trousseaux de la liste de recherche.
+          security list-keychains -d user -s "$kc" $(security list-keychains -d user | tr -d '"')
           rm -f "$RUNNER_TEMP/cert.p12"
           sha1="$(security find-identity -p codesigning "$kc" | awk '/Azure Branch Diff Code Signing/ {print $2; exit}')"
           test -n "$sha1"

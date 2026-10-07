@@ -14,6 +14,8 @@ import { DiffView } from '../components/DiffView';
 
 /** Fichiers par appel pendant l'analyse des espaces (la liste se met à jour entre deux appels). */
 const WS_CHUNK = 40;
+/** Au-delà, pas d'analyse des espaces (des milliers de lectures Azure). */
+const WS_MAX = 3000;
 const EMPTY_SET = new Set<string>();
 
 const badge = (s: Side) => (s.kind === 'azure' ? 'Azure' : 'Local');
@@ -174,7 +176,8 @@ export function Compare() {
   useEffect(() => {
     if (!result || !picked) return;
     let stopped = false;
-    const todo = result.changes.filter((c) => !c.inTarget && !c.isBinary);
+    const candidates = result.changes.filter((c) => !c.inTarget && !c.isBinary);
+    const todo = candidates.length > WS_MAX ? [] : candidates;
     setWs({ of: result, paths: new Set(), done: 0, total: todo.length, failed: false });
     void (async () => {
       const found = new Set<string>();
@@ -187,7 +190,8 @@ export function Compare() {
         }
         if (stopped) return;
         const done = Math.min(i + WS_CHUNK, todo.length);
-        setWs((w) => (w.of === result ? { ...w, paths: new Set(found), done } : w));
+        // Nouvel ensemble seulement s'il a changé : la liste n'est recalculée qu'en cas de nouveaux fichiers masqués.
+        setWs((w) => (w.of !== result ? w : { ...w, paths: w.paths.size === found.size ? w.paths : new Set(found), done }));
       }
     })();
     return () => {
@@ -237,9 +241,10 @@ export function Compare() {
   // Masqués par défaut : déjà identiques sur la cible (mode PR) et différences d'espaces seulement.
   const visibleChanges = useMemo(() => {
     if (!result) return [];
+    if (!wsPaths.size && (!inTargetCount || showHidden)) return result.changes; // rien à masquer : même tableau, pas de nouveau rendu
     const marked = wsPaths.size ? result.changes.map((c) => (wsPaths.has(c.path) ? { ...c, whitespaceOnly: true } : c)) : result.changes;
     return showHidden ? marked : marked.filter((c) => !c.inTarget && !c.whitespaceOnly);
-  }, [result, wsPaths, showHidden]);
+  }, [result, wsPaths, showHidden, inTargetCount]);
   const hiddenCount = inTargetCount + wsPaths.size;
   const targetName = picked ? (picked.target.kind === 'azure' ? picked.target.branch : sideLabel(picked.target, app.clone, 'cible')) : '';
   const leftLabel = picked ? label(picked.target, true) : '';
