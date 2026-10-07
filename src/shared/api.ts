@@ -72,6 +72,8 @@ export interface Api {
   localRepo(dir: string): Promise<Result<LocalRepoInfo>>;
   compare(source: Side, target: Side, mode: 'mergeBase' | 'tips'): Promise<Result<CompareResult>>;
   fileSides(source: Side, target: Side, entry: ChangeEntry, cmp: CompareResult): Promise<Result<{ left: FileSide; right: FileSide }>>;
+  /** Parmi `entries` (100 au plus), les chemins dont les deux versions ne diffèrent que par des espaces. */
+  whitespaceOnly(source: Side, target: Side, entries: ChangeEntry[], cmp: CompareResult): Promise<Result<string[]>>;
   findPr(repo: RepoRef, source: string, target: string): Promise<Result<PrSummary | null>>;
   createPr(repo: RepoRef, input: NewPrInput): Promise<Result<PrSummary>>;
   getPr(repo: RepoRef, prId: number): Promise<Result<PrSummary>>;
@@ -120,6 +122,7 @@ export const API_METHODS = [
   'localRepo',
   'compare',
   'fileSides',
+  'whitespaceOnly',
   'findPr',
   'createPr',
   'getPr',

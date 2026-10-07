@@ -11,6 +11,10 @@ import { SourcePicker, type PickerValue } from '../components/SourcePicker';
 import { FileTree, type LineCounts } from '../components/FileTree';
 import { DiffView } from '../components/DiffView';
 
+/** Fichiers par appel pendant l'analyse des espaces (la liste se met à jour entre deux appels). */
+const WS_CHUNK = 40;
+const EMPTY_SET = new Set<string>();
+
 const badge = (s: Side) => (s.kind === 'azure' ? 'Azure' : 'Local');
 
 export function Compare() {
@@ -24,7 +28,15 @@ export function Compare() {
   const [sides, setSides] = useState<{ left: FileSide; right: FileSide } | null>(null);
   const [loadingFile, setLoadingFile] = useState(false);
   const [sideBySide, setSideBySide] = useState(true);
-  const [showInTarget, setShowInTarget] = useState(false);
+  const [showHidden, setShowHidden] = useState(false);
+  // Analyse en arrière-plan des fichiers qui ne diffèrent que par des espaces.
+  const [ws, setWs] = useState<{ of: CompareResult | null; paths: Set<string>; done: number; total: number; failed: boolean }>({
+    of: null,
+    paths: new Set(),
+    done: 0,
+    total: 0,
+    failed: false,
+  });
   const lastRun = useRef<() => void>(() => {});
   const fileReq = useRef(0);
   const compareCount = useRef(0);
@@ -145,6 +157,30 @@ export function Compare() {
     }
   }
 
+  useEffect(() => {
+    if (!result || !picked) return;
+    let stopped = false;
+    const todo = result.changes.filter((c) => !c.inTarget && !c.isBinary);
+    setWs({ of: result, paths: new Set(), done: 0, total: todo.length, failed: false });
+    void (async () => {
+      const found = new Set<string>();
+      for (let i = 0; i < todo.length && !stopped; i += WS_CHUNK) {
+        try {
+          for (const p of await call(api.whitespaceOnly(picked.source, picked.target, todo.slice(i, i + WS_CHUNK), result))) found.add(p);
+        } catch {
+          if (!stopped) setWs((w) => (w.of === result ? { ...w, failed: true } : w));
+          return;
+        }
+        if (stopped) return;
+        const done = Math.min(i + WS_CHUNK, todo.length);
+        setWs((w) => (w.of === result ? { ...w, paths: new Set(found), done } : w));
+      }
+    })();
+    return () => {
+      stopped = true;
+    };
+  }, [result, picked]);
+
   // Un autre dépôt Azure ou un autre clone : l'ancien résultat n'a plus de sens.
   useEffect(() => {
     fileReq.current++;
@@ -158,11 +194,15 @@ export function Compare() {
   // Les deux volets montrent toujours l'état actuel des branches ; en mode PR, seule la liste change (ce que la source apporte).
   const label = (s: Side, base?: boolean) => `${badge(s)} · ${sideLabel(s, app.clone, base ? 'cible' : 'source')}`;
   const inTargetCount = useMemo(() => result?.changes.filter((c) => c.inTarget).length ?? 0, [result]);
-  // Mode PR : les fichiers déjà identiques sur la cible sont masqués par défaut.
-  const visibleChanges = useMemo(
-    () => (!result ? [] : showInTarget || !inTargetCount ? result.changes : result.changes.filter((c) => !c.inTarget)),
-    [result, showInTarget, inTargetCount],
-  );
+  const wsPaths = ws.of === result ? ws.paths : EMPTY_SET;
+  const scanning = ws.of === result && !ws.failed && ws.done < ws.total;
+  // Masqués par défaut : déjà identiques sur la cible (mode PR) et différences d'espaces seulement.
+  const visibleChanges = useMemo(() => {
+    if (!result) return [];
+    const marked = wsPaths.size ? result.changes.map((c) => (wsPaths.has(c.path) ? { ...c, whitespaceOnly: true } : c)) : result.changes;
+    return showHidden ? marked : marked.filter((c) => !c.inTarget && !c.whitespaceOnly);
+  }, [result, wsPaths, showHidden]);
+  const hiddenCount = inTargetCount + wsPaths.size;
   const targetName = picked ? (picked.target.kind === 'azure' ? picked.target.branch : sideLabel(picked.target, app.clone, 'cible')) : '';
   const leftLabel = picked ? label(picked.target, true) : '';
   const rightLabel = picked ? label(picked.source) : '';
@@ -176,24 +216,41 @@ export function Compare() {
           <ErrorBanner error={error} onRetry={() => lastRun.current()} onClose={() => setError(null)} />
         </div>
       )}
-      {result && picked && inTargetCount > 0 && (
+      {result && picked && (hiddenCount > 0 || scanning) && (
         <div className="ancestor-note" role="note">
           <span>
-            <strong>
-              {inTargetCount} fichier{inTargetCount > 1 ? 's' : ''} déjà identique{inTargetCount > 1 ? 's' : ''} sur {targetName}
-            </strong>{' '}
-            (portés sans merge, cherry-pick ou squash){' '}
-            {showInTarget ? (inTargetCount > 1 ? 'sont affichés' : 'est affiché') : inTargetCount > 1 ? 'sont masqués' : 'est masqué'} : rien à
-            apporter.
+            {inTargetCount > 0 && (
+              <>
+                <strong>
+                  {inTargetCount} fichier{inTargetCount > 1 ? 's' : ''} déjà identique{inTargetCount > 1 ? 's' : ''} sur {targetName}
+                </strong>{' '}
+                (portés sans merge, cherry-pick ou squash)
+              </>
+            )}
+            {inTargetCount > 0 && wsPaths.size > 0 && ' · '}
+            {wsPaths.size > 0 && (
+              <strong>
+                {wsPaths.size} fichier{wsPaths.size > 1 ? 's' : ''} qui ne diff{wsPaths.size > 1 ? 'èrent' : 'ère'} que par des espaces
+              </strong>
+            )}
+            {hiddenCount > 0 && (showHidden ? ' : affichés.' : ' : masqués, rien à apporter.')}
+            {scanning && (
+              <span className="muted">
+                {' '}
+                Recherche des différences d’espaces… {ws.done} / {ws.total}
+              </span>
+            )}
           </span>
-          <button type="button" className="btn" onClick={() => setShowInTarget((v) => !v)}>
-            {showInTarget ? 'Masquer' : 'Afficher'}
-          </button>
+          {hiddenCount > 0 && (
+            <button type="button" className="btn" onClick={() => setShowHidden((v) => !v)}>
+              {showHidden ? 'Masquer' : 'Afficher'}
+            </button>
+          )}
         </div>
       )}
       {result && picked ? (
         <div className="split">
-          <FileTree changes={visibleChanges} counts={counts} selected={entry?.path ?? null} onSelect={openFile} />
+          <FileTree changes={visibleChanges} resetKey={result} counts={counts} selected={entry?.path ?? null} onSelect={openFile} />
           <DiffView
             entry={entry}
             sides={sides}

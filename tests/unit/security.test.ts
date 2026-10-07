@@ -83,7 +83,26 @@ describe('external links and URLs', () => {
 });
 
 describe('local file access', () => {
+  test('whitespaceOnly : côtés Azure sans session → auth ; plus de 100 fichiers → refus', async () => {
+    const { api } = handlers();
+    const AZ = { kind: 'azure', project: 'P', repoId: 'r', branch: 'b' } as const;
+    const e = { path: 'a.cs', change: 'edit', isBinary: false } as const;
+    const r = await api.whitespaceOnly(AZ, { ...AZ, branch: 'c' }, [e], { changes: [] });
+    expect(!r.ok && r.error.code).toBe('auth');
+    expect((await api.whitespaceOnly(AZ, AZ, Array(101).fill(e), { changes: [] })).ok).toBe(false);
+  });
+
   const cases = ['../outside.txt', '../../etc/passwd', '/etc/passwd', 'sub/../../outside.txt', '..', '..\\..\\windows\\win.ini'];
+  test.each(cases)('whitespaceOnly refuses %s', async (path) => {
+    const root = gitDir({ 'sub/a.cs': 'x' });
+    const { api } = handlers({ pickFolder: async () => root });
+    await api.login('https://dev.azure.com/X', PAT);
+    await api.pickFolder();
+    const r = await api.whitespaceOnly(worktreeSide(root), worktreeSide(root), [{ path, change: 'edit', isBinary: false }], { changes: [] });
+    if (path.includes('\\') && process.platform !== 'win32') expect(r.ok).toBe(true);
+    else expect(r.ok).toBe(false);
+  });
+
   test.each(cases)('fileSides refuses %s', async (path) => {
     const root = gitDir({ 'sub/a.cs': 'x' });
     const { api } = handlers({ pickFolder: async () => root });
@@ -119,7 +138,7 @@ describe('IPC surface', () => {
   test('every Azure method requires a session', async () => {
     const { api } = handlers();
     // compare / fileSides / localRepo : les côtés locaux ne demandent pas de session Azure (vérifié ci-dessous pour les côtés Azure).
-    const open = ['session', 'login', 'logout', 'pickFolder', 'openExternal', 'localRepo', 'compare', 'fileSides'];
+    const open = ['session', 'login', 'logout', 'pickFolder', 'openExternal', 'localRepo', 'compare', 'fileSides', 'whitespaceOnly'];
     // Merge local : n'utilise que git et le clone approuvé (mergeFallbackPr, qui crée une PR, reste soumis à la session).
     // Organisations : gérées avant toute session (liste, ajout, découverte, retrait).
     open.push('orgs', 'connectOrg', 'addOrgs', 'discoverOrgs', 'removeOrg');

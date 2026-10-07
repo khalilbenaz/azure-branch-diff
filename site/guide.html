@@ -132,6 +132,7 @@
 <li><b>Comme une PR</b> : la liste ne contient que ce que la source apporte à la cible. Les fichiers déjà identiques sur la cible (portés sans merge, cherry-pick, squash) sont masqués, et un bandeau permet de les afficher.</li>
 <li><b>Tête contre tête</b> : toutes les différences entre les deux branches.</li>
 </ul>
+<p>Les fichiers qui ne diffèrent que par des <b>espaces</b> (indentation, lignes vides, espaces de fin de ligne, CRLF / LF) sont aussi masqués. L'analyse se fait en arrière-plan juste après la comparaison. Le bandeau indique sa progression et permet d'afficher ces fichiers.</p>
 <figure><img class="shot" src="img/02-diff.webp" width="1400" height="900" loading="lazy" alt="Diff côte à côte, cible à gauche et source à droite" /><figcaption>Cible (master) à gauche, source (feature/data) à droite.</figcaption></figure>
 <p>Dans la liste des fichiers, vous pouvez filtrer par nom ou par extension. Cliquez sur un dossier pour le replier, ou utilisez <b>Tout replier</b>.</p>
 <figure><img class="shot" src="img/09-folded.webp" width="1400" height="900" loading="lazy" alt="Liste des fichiers avec le dossier racine replié" /><figcaption>Dossiers repliables, avec le nombre de fichiers.</figcaption></figure>
