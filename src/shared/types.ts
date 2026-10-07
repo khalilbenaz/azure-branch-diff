@@ -31,6 +31,8 @@ export interface ChangeEntry {
   sizeBytes?: number;
   added?: number;
   removed?: number;
+  /** Mode PR : le fichier est déjà identique sur la cible (porté sans merge, cherry-pick, squash). */
+  inTarget?: boolean;
 }
 
 export interface FileSide {

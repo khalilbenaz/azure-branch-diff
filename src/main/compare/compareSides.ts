@@ -20,17 +20,35 @@ async function localCommit(side: Extract<Side, { kind: 'local' }>): Promise<stri
   return side.ref.type === 'worktree' ? WORKTREE : resolveCommit(side.root, side.ref);
 }
 
+/**
+ * Mode PR : les changements depuis l'ancêtre commun qui n'apparaissent plus entre les têtes
+ * sont déjà présents à l'identique sur la cible (portage sans merge, cherry-pick, merge en squash).
+ */
+export function markInTarget(changes: ChangeEntry[], tipChanges: ChangeEntry[]): ChangeEntry[] {
+  const differ = new Set<string>();
+  for (const c of tipChanges) {
+    differ.add(c.path);
+    if (c.originalPath) differ.add(c.originalPath);
+  }
+  return changes.map((c) => (differ.has(c.path) || (c.originalPath && differ.has(c.originalPath)) ? c : { ...c, inTarget: true }));
+}
+
 /** Comparaison de `source` (droite) par rapport à `target` (gauche), quelles que soient leurs natures. */
 export async function compareSides(ctx: AzureContext | null, source: Side, target: Side, mode: 'mergeBase' | 'tips'): Promise<CompareResult> {
   if (source.kind === 'azure' && target.kind === 'azure') {
     if (source.repoId !== target.repoId) throw fail('Les deux branches doivent appartenir au même dépôt.');
-    const r = await listBranchChanges(needCtx(ctx), target.project, target.repoId, source.branch, target.branch, mode);
-    return { kind: 'azure', ...r };
+    const c = needCtx(ctx);
+    const [r, tips] = await Promise.all([
+      listBranchChanges(c, target.project, target.repoId, source.branch, target.branch, mode),
+      mode === 'mergeBase' ? listBranchChanges(c, target.project, target.repoId, source.branch, target.branch, 'tips') : null,
+    ]);
+    return { kind: 'azure', ...r, changes: tips ? markInTarget(r.changes, tips.changes) : r.changes };
   }
   if (source.kind === 'local' && target.kind === 'local' && source.root === target.root && (await insideGitRepo(source.root))) {
     const r = await listLocalChanges(source.root, target.ref, source.ref, mode);
+    if (mode === 'mergeBase') r.changes = markInTarget(r.changes, (await listLocalChanges(source.root, target.ref, source.ref, 'tips')).changes);
     const local = source.ref.type === 'worktree' ? await getGitInfo(source.root) : undefined;
-    return { kind: 'local', changes: r.changes, baseCommit: r.baseCommit, sourceCommit: r.headCommit, targetCommit: r.baseCommit, local };
+    return { kind: 'local', changes: r.changes, baseCommit: r.baseCommit, sourceCommit: r.headCommit, targetCommit: r.targetTip, local };
   }
   // Mixte (Azure ↔ local, ou deux dossiers différents) : pas d'historique commun ; comparaison des têtes par empreintes.
   const tree = (side: Side) => (side.kind === 'azure' ? listTree(needCtx(ctx), side.project, side.repoId, side.branch) : localTree(side.root, side.ref));
@@ -57,10 +75,17 @@ export async function sidesContent(
   entry: ChangeEntry,
   cmp: CompareResult,
 ): Promise<{ left: FileSide; right: FileSide }> {
-  const leftPath = entry.originalPath ?? entry.path;
-  const leftCommit = cmp.kind === 'mixed' ? cmp.targetCommit : cmp.baseCommit;
+  // La gauche montre toujours l'état actuel de la cible ; en mode PR, la liste reste « ce que la source apporte ».
+  const leftCommit = cmp.targetCommit ?? cmp.baseCommit;
+  const fromAncestor = cmp.kind !== 'mixed' && !!cmp.baseCommit && cmp.baseCommit !== leftCommit;
+  // Ajouté depuis l'ancêtre : le fichier peut déjà exister sur la cible actuelle (portage, cherry-pick).
+  const readLeft = async () => {
+    if (entry.change === 'add' && !fromAncestor) return EMPTY_SIDE;
+    const l = await sideContent(ctx, target, entry.originalPath ?? entry.path, leftCommit, cmp);
+    return l === EMPTY_SIDE && entry.originalPath && fromAncestor ? sideContent(ctx, target, entry.path, leftCommit, cmp) : l;
+  };
   const [left, right] = await Promise.all([
-    entry.change === 'add' ? EMPTY_SIDE : sideContent(ctx, target, leftPath, leftCommit, cmp),
+    readLeft(),
     entry.change === 'delete' ? EMPTY_SIDE : sideContent(ctx, source, entry.path, cmp.sourceCommit, cmp),
   ]);
   return { left, right };

@@ -27,10 +27,11 @@ export interface CompareResult {
   /** azure : deux branches Azure ; local : deux références du même clone ; mixed : Azure et local (têtes). */
   kind?: 'azure' | 'local' | 'mixed';
   changes: ChangeEntry[];
-  /** Commit affiché à gauche (cible, ou ancêtre commun en mode PR). */
+  /** Point de départ de la liste (ancêtre commun en mode PR, sinon tête de la cible). */
   baseCommit?: string;
   /** Commit affiché à droite (source), ou WORKTREE pour une copie de travail. */
   sourceCommit?: string;
+  /** Tête de la cible : commit affiché à gauche, quel que soit le mode. */
   targetCommit?: string;
   local?: LocalInfo | null;
 }

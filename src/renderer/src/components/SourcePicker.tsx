@@ -105,9 +105,6 @@ function SideCard({ role, draft, onDraft, branches }: SideCardProps) {
   );
 }
 
-/** Diffusé par la page Comparer pour changer le mode de comparaison affiché. */
-export const MODE_EVENT = 'abd:mode';
-
 /** Barre d'outils : Cible ← Source (Azure ou local), mode, Comparer, PR, Fusionner. */
 export function SourcePicker({ busy, onCompare, onError, onPr, onMerge }: Props) {
   const app = useApp();
@@ -138,13 +135,6 @@ export function SourcePicker({ busy, onCompare, onError, onPr, onMerge }: Props)
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [repo?.repoId]);
-
-  // Bandeau « Voir la cible actuelle » (page Comparer) : bascule le mode affiché.
-  useEffect(() => {
-    const onMode = (e: Event) => setMode((e as CustomEvent<'mergeBase' | 'tips'>).detail);
-    window.addEventListener(MODE_EVENT, onMode);
-    return () => window.removeEventListener(MODE_EVENT, onMode);
-  }, []);
 
   // « Actualiser » (barre latérale) : relit les branches Azure en gardant les choix encore valides.
   useEffect(() => {
@@ -214,7 +204,7 @@ export function SourcePicker({ busy, onCompare, onError, onPr, onMerge }: Props)
               title={
                 mixed
                   ? 'Azure ↔ local : dernières versions uniquement'
-                  : "Comme une PR : depuis l'ancêtre commun. Tête contre tête : dernières versions."
+                  : "Comme une PR : seulement ce que la source apporte. Tête contre tête : toutes les différences. Les deux volets montrent toujours l'état actuel."
               }
             >
               <button aria-pressed={!mixed && mode === 'mergeBase'} disabled={mixed} onClick={() => setMode('mergeBase')}>

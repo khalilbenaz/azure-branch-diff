@@ -127,9 +127,10 @@
           <h2><span class="n">03</span>Comparer : Cible ← Source</h2>
 <p>Ce qui est à gauche s'affiche à gauche. Dans la barre d'outils, la <b>Cible</b> est à gauche et la <b>Source</b> à droite ; le diff garde le même ordre. Le bouton ⇄ échange les deux côtés.</p>
 <p>Chaque côté est <b>Azure</b> (une branche du dépôt) ou <b>Local</b>. En local, vous choisissez une branche du clone, une branche <code>origin/*</code> ou la <b>copie de travail</b>, modifications non commitées comprises.</p>
+<p>Dans tous les cas, les deux volets du diff montrent l'<b>état actuel</b> des branches. Le mode change seulement la liste des fichiers :</p>
 <ul>
-<li><b>Comme une PR</b> : seulement ce que la source apporte depuis l'ancêtre commun. La gauche montre alors cet ancêtre, pas l'état actuel de la cible. Un bandeau le signale, avec le bouton <b>Voir l'état actuel de …</b>.</li>
-<li><b>Tête contre tête</b> : l'état actuel de la cible contre celui de la source. À choisir quand les branches sont fusionnées en squash : des changements déjà présents dans la cible réapparaîtraient sinon.</li>
+<li><b>Comme une PR</b> : la liste ne contient que ce que la source apporte à la cible. Les fichiers déjà identiques sur la cible (portés sans merge, cherry-pick, squash) sont masqués, et un bandeau permet de les afficher.</li>
+<li><b>Tête contre tête</b> : toutes les différences entre les deux branches.</li>
 </ul>
 <figure><img class="shot" src="img/02-diff.webp" width="1400" height="900" loading="lazy" alt="Diff côte à côte, cible à gauche et source à droite" /><figcaption>Cible (master) à gauche, source (feature/data) à droite.</figcaption></figure>
 <p>Dans la liste des fichiers, vous pouvez filtrer par nom ou par extension. Cliquez sur un dossier pour le replier, ou utilisez <b>Tout replier</b>.</p>

@@ -84,3 +84,46 @@ test('Azure ↔ Azure : inchangé', async () => {
   expect(cmp.kind).toBe('azure');
   expect(cmp.baseCommit).toBe('base000');
 });
+
+test('mode PR : un fichier déjà porté à l’identique sur la cible est marqué inTarget (local)', async () => {
+  const { clone } = makeOrigin();
+  git(clone, 'checkout', '-q', 'master');
+  // Portage sur master (commit à part, sans merge) du Data.cs de feature/data.
+  commitFile(clone, 'src/Data.cs', git(clone, 'show', 'origin/feature/data:src/Data.cs') + '\n');
+  const cmp = await compareSides(null, local(clone, { type: 'remote', name: 'feature/data' }), local(clone, { type: 'branch', name: 'master' }), 'mergeBase');
+  const flags = Object.fromEntries(cmp.changes.map((c) => [c.path, !!c.inTarget]));
+  expect(flags).toEqual({ 'src/Data.cs': true, 'src/Service.cs': false });
+  const tips = await compareSides(null, local(clone, { type: 'remote', name: 'feature/data' }), local(clone, { type: 'branch', name: 'master' }), 'tips');
+  expect(tips.changes.some((c) => c.inTarget)).toBe(false);
+});
+
+test('mode PR : un fichier déjà identique sur la cible est marqué inTarget (Azure)', async () => {
+  const change = (path: string, changeType = 2) => ({ changeType, item: { path, gitObjectType: 3 } });
+  const ctx = {
+    orgUrl: 'https://dev.azure.com/demo',
+    core: { getProjects: async () => [] },
+    git: {
+      getCommitDiffs: async (_r: string, _p: string, common: boolean) =>
+        common
+          ? { changes: [change('/ported.cs', 1), change('/new.cs', 1), change('/both.cs')], allChangesIncluded: true, commonCommit: 'b', baseCommit: 't', targetCommit: 's' }
+          : { changes: [change('/new.cs', 1), change('/both.cs')], allChangesIncluded: true, baseCommit: 't', targetCommit: 's' },
+    },
+  } as unknown as Parameters<typeof compareSides>[0];
+  const cmp = await compareSides(ctx, AZ_FEATURE, AZ_MASTER, 'mergeBase');
+  expect(Object.fromEntries(cmp.changes.map((c) => [c.path, !!c.inTarget]))).toEqual({ 'both.cs': false, 'new.cs': false, 'ported.cs': true });
+});
+
+test('mode PR : la gauche montre l’état actuel de la cible, pas l’ancêtre commun', async () => {
+  const { clone } = makeOrigin();
+  git(clone, 'checkout', '-q', 'master');
+  const svc = git(clone, 'show', 'origin/feature/data:src/Service.cs');
+  commitFile(clone, 'src/Service.cs', svc.replace('Amount = 30', 'Amount = 20') + '\n');
+  commitFile(clone, 'src/Data.cs', 'version master\n'); // ajouté par la source, existe déjà (différent) sur la cible
+  const src = local(clone, { type: 'remote', name: 'feature/data' });
+  const tgt = local(clone, { type: 'branch', name: 'master' });
+  const cmp = await compareSides(null, src, tgt, 'mergeBase');
+  expect(cmp.targetCommit).toBe(git(clone, 'rev-parse', 'master'));
+  const left = async (p: string) => (await sidesContent(null, src, tgt, cmp.changes.find((c) => c.path === p)!, cmp)).left.content;
+  expect(await left('src/Service.cs')).toContain('Amount = 20');
+  expect(await left('src/Data.cs')).toBe('version master\n');
+});

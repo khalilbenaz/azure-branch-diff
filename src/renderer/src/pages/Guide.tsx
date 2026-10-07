@@ -66,15 +66,17 @@ const SECTIONS: Section[] = [
           </li>
         </ul>
         <p>Vous pouvez donc comparer Azure ↔ Azure, Azure ↔ local ou local ↔ local, entre n’importe quelles branches.</p>
-        <p>Le mode de comparaison change ce qui est montré :</p>
+        <p>
+          Dans tous les cas, les deux volets du diff montrent l’<strong>état actuel</strong> des branches. Le mode change seulement la liste
+          des fichiers :
+        </p>
         <ul>
           <li>
-            <strong>Comme une PR</strong> : seulement ce que la source apporte depuis l’ancêtre commun. La gauche montre alors cet ancêtre, pas l’état
-            actuel de la cible : un bandeau le signale, avec un bouton pour voir la cible actuelle ;
+            <strong>Comme une PR</strong> : la liste ne contient que ce que la source apporte à la cible. Les fichiers déjà identiques sur
+            la cible (portés sans merge, cherry-pick, squash) sont masqués ; un bandeau permet de les afficher ;
           </li>
           <li>
-            <strong>Tête contre tête</strong> : l’état actuel de la cible contre celui de la source. À choisir quand les branches sont fusionnées en
-            squash, ou pour savoir exactement ce qui diffère aujourd’hui.
+            <strong>Tête contre tête</strong> : toutes les différences entre les deux branches.
           </li>
         </ul>
         <p>

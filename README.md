@@ -57,9 +57,9 @@ Les jetons sont chiffrés par le trousseau du système (Keychain, DPAPI), jamais
 
 | Cible (gauche) | ⇄ | Source (droite) | Mode et actions |
 |---|---|---|---|
-| `Azure` ou `Local`, puis la branche | inverse | `Azure` ou `Local`, puis la branche | **Comme une PR** (depuis l'ancêtre commun) ou **Tête contre tête** ; **Comparer**, **Créer / ouvrir la PR**, **Fusionner** |
+| `Azure` ou `Local`, puis la branche | inverse | `Azure` ou `Local`, puis la branche | **Comme une PR** (seulement ce que la source apporte ; fichiers déjà portés masqués) ou **Tête contre tête** ; **Comparer**, **Créer / ouvrir la PR**, **Fusionner** |
 
-Dans le diff : à gauche la cible (avant), à droite la source (après) ; **vert** = ce que la source apporte, **rouge** = ce qu'elle retire.
+Dans le diff : à gauche la cible, à droite la source, toujours dans leur **état actuel** ; **vert** = ce que la source apporte, **rouge** = ce qu'elle retire.
 
 Liste des fichiers : filtre par nom ou extension ; chaque dossier se replie d'un clic (**Tout replier / Tout déplier**).
 
