@@ -187,6 +187,11 @@ export function FileTree({ changes, counts, selected, onSelect }: Props) {
                             {BADGE[c.change]}
                           </span>
                           <span className="tree-name">{nameOf(c.path)}</span>
+                          {c.inTarget && (
+                            <span className="tree-tag" title="Déjà identique sur la cible : rien à apporter">
+                              déjà dans la cible
+                            </span>
+                          )}
                           {n && (
                             <span className="counts">
                               <span className="plus">+{n.added}</span> <span className="minus">−{n.removed}</span>

@@ -14,6 +14,8 @@ export interface LocalChanges {
   baseCommit: string;
   /** Commit de droite, ou WORKTREE pour la copie de travail. */
   headCommit: string;
+  /** Tête de la cible (affichée à gauche, même en mode PR). */
+  targetTip: string;
 }
 
 const KIND: Record<string, ChangeType> = { A: 'add', C: 'add', M: 'edit', T: 'edit', D: 'delete', R: 'rename' };
@@ -53,6 +55,7 @@ export async function listLocalChanges(root: string, base: LocalRef, head: Local
   return {
     changes: changes.filter((c) => !inExcludedDir(c.path)).sort((a, b) => a.path.localeCompare(b.path)),
     baseCommit: left,
+    targetTip: baseTip,
     headCommit: head.type === 'worktree' ? WORKTREE : headTip,
   };
 }

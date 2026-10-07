@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import type { CompareResult } from '../../../shared/api';
 import type { ApiError, ChangeEntry, FileSide, Side } from '../../../shared/types';
 import { api, asApiError, call } from '../lib/api';
@@ -7,7 +7,7 @@ import { azureFileBranch } from '../lib/prLogic';
 import { mergeInput, sideLabel } from '../lib/sides';
 import { useApp } from '../lib/context';
 import { ErrorBanner } from '../components/ErrorBanner';
-import { MODE_EVENT, SourcePicker, type PickerValue } from '../components/SourcePicker';
+import { SourcePicker, type PickerValue } from '../components/SourcePicker';
 import { FileTree, type LineCounts } from '../components/FileTree';
 import { DiffView } from '../components/DiffView';
 
@@ -24,6 +24,7 @@ export function Compare() {
   const [sides, setSides] = useState<{ left: FileSide; right: FileSide } | null>(null);
   const [loadingFile, setLoadingFile] = useState(false);
   const [sideBySide, setSideBySide] = useState(true);
+  const [showInTarget, setShowInTarget] = useState(false);
   const lastRun = useRef<() => void>(() => {});
   const fileReq = useRef(0);
   const compareCount = useRef(0);
@@ -154,19 +155,15 @@ export function Compare() {
     setCounts({});
   }, [app.repo?.repoId, app.clone?.root]);
 
-  const short = (sha?: string) => (sha && /^[0-9a-f]{7,}$/i.test(sha) ? sha.slice(0, 7) : '');
-  const ancestor = picked?.mode === 'mergeBase' && result?.kind !== 'mixed';
-  // Mode PR : la gauche est l'ancêtre commun ; s'il diffère de la tête de la cible, la cible a avancé depuis.
-  const behind = ancestor && !!result?.baseCommit && !!result?.targetCommit && result.baseCommit !== result.targetCommit;
-  const label = (s: Side, base?: boolean) => {
-    const sha = base && ancestor ? short(result?.baseCommit) : '';
-    return `${badge(s)} · ${sideLabel(s, app.clone, base ? 'cible' : 'source')}${base && ancestor ? ` · ancêtre commun${sha ? ` (${sha})` : ''}` : ''}`;
-  };
-  const showCurrentTarget = () => {
-    if (!picked) return;
-    window.dispatchEvent(new CustomEvent(MODE_EVENT, { detail: 'tips' }));
-    void runCompare({ ...picked, mode: 'tips' });
-  };
+  // Les deux volets montrent toujours l'état actuel des branches ; en mode PR, seule la liste change (ce que la source apporte).
+  const label = (s: Side, base?: boolean) => `${badge(s)} · ${sideLabel(s, app.clone, base ? 'cible' : 'source')}`;
+  const inTargetCount = useMemo(() => result?.changes.filter((c) => c.inTarget).length ?? 0, [result]);
+  // Mode PR : les fichiers déjà identiques sur la cible sont masqués par défaut.
+  const visibleChanges = useMemo(
+    () => (!result ? [] : showInTarget || !inTargetCount ? result.changes : result.changes.filter((c) => !c.inTarget)),
+    [result, showInTarget, inTargetCount],
+  );
+  const targetName = picked ? (picked.target.kind === 'azure' ? picked.target.branch : sideLabel(picked.target, app.clone, 'cible')) : '';
   const leftLabel = picked ? label(picked.target, true) : '';
   const rightLabel = picked ? label(picked.source) : '';
   const step = !app.repo && !app.clone ? 1 : 2;
@@ -179,23 +176,24 @@ export function Compare() {
           <ErrorBanner error={error} onRetry={() => lastRun.current()} onClose={() => setError(null)} />
         </div>
       )}
-      {result && picked && behind && (
+      {result && picked && inTargetCount > 0 && (
         <div className="ancestor-note" role="note">
           <span>
-            À gauche : l’<strong>ancêtre commun</strong>
-            {short(result.baseCommit) ? ` (${short(result.baseCommit)})` : ''}, pas l’état actuel de{' '}
-            <strong>{picked.target.kind === 'azure' ? picked.target.branch : sideLabel(picked.target, app.clone, 'cible')}</strong>. Vous voyez ce que
-            la source apporte depuis ce point (comme une PR) ; après des merges en squash, des changements déjà présents dans la cible peuvent
-            réapparaître.
+            <strong>
+              {inTargetCount} fichier{inTargetCount > 1 ? 's' : ''} déjà identique{inTargetCount > 1 ? 's' : ''} sur {targetName}
+            </strong>{' '}
+            (portés sans merge, cherry-pick ou squash){' '}
+            {showInTarget ? (inTargetCount > 1 ? 'sont affichés' : 'est affiché') : inTargetCount > 1 ? 'sont masqués' : 'est masqué'} : rien à
+            apporter.
           </span>
-          <button className="btn" onClick={showCurrentTarget} disabled={busy}>
-            Voir l’état actuel de {picked.target.kind === 'azure' ? picked.target.branch : 'la cible'}
+          <button type="button" className="btn" onClick={() => setShowInTarget((v) => !v)}>
+            {showInTarget ? 'Masquer' : 'Afficher'}
           </button>
         </div>
       )}
       {result && picked ? (
         <div className="split">
-          <FileTree changes={result.changes} counts={counts} selected={entry?.path ?? null} onSelect={openFile} />
+          <FileTree changes={visibleChanges} counts={counts} selected={entry?.path ?? null} onSelect={openFile} />
           <DiffView
             entry={entry}
             sides={sides}

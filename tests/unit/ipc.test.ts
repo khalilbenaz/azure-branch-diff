@@ -89,7 +89,8 @@ test('compare azure↔azure and file sides (edit, add, delete)', async () => {
   expect(cmp.baseCommit).toBe('base000');
   const byPath = Object.fromEntries(cmp.changes.map((c) => [c.path, c]));
   const edit = ok(await api.fileSides(SOURCE, TARGET, byPath['src/Service.cs'], cmp));
-  expect(edit.left.content).toContain('Amount => 10');
+  // Gauche : état actuel de la cible (tgt222), même en mode PR.
+  expect(edit.left.content).toContain('Amount => 20');
   expect(edit.right.content).toContain('Export csv');
   const add = ok(await api.fileSides(SOURCE, TARGET, byPath['src/Data.cs'], cmp));
   expect(add.left.content).toBe('');
