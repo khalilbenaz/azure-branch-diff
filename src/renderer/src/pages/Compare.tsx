@@ -8,6 +8,7 @@ import { mergeInput, sideLabel } from '../lib/sides';
 import { useApp } from '../lib/context';
 import { ErrorBanner } from '../components/ErrorBanner';
 import { SourcePicker, type PickerValue } from '../components/SourcePicker';
+import { REFRESH_EVENT } from '../components/Sidebar';
 import { FileTree, type LineCounts } from '../components/FileTree';
 import { DiffView } from '../components/DiffView';
 
@@ -40,6 +41,9 @@ export function Compare() {
   const lastRun = useRef<() => void>(() => {});
   const fileReq = useRef(0);
   const compareCount = useRef(0);
+  // Fichier à rouvrir après une comparaison relancée par « Actualiser ».
+  const reopen = useRef<string | null>(null);
+  const latest = useRef<{ picked: PickerValue | null; entry: ChangeEntry | null; busy: boolean }>({ picked: null, entry: null, busy: false });
 
   const report = (e: unknown) => {
     const err = asApiError(e);
@@ -52,8 +56,9 @@ export function Compare() {
     app.setSelection({ repo: app.repo, source: sourceBranch, target: v.target.branch, nonce: ++compareCount.current });
   }
 
-  async function runCompare(v: PickerValue) {
+  async function runCompare(v: PickerValue, keepFile?: string) {
     lastRun.current = () => void runCompare(v);
+    reopen.current = keepFile ?? null;
     fileReq.current++; // ignore un diff de fichier encore en cours sur l'ancien résultat
     setLoadingFile(false);
     setBusy(true);
@@ -189,6 +194,30 @@ export function Compare() {
       stopped = true;
     };
   }, [result, picked]);
+
+  latest.current = { picked, entry, busy };
+  const rerun = useRef(runCompare);
+  rerun.current = runCompare;
+
+  // « Actualiser » (barre latérale) : la comparaison affichée est relancée avec les dernières versions des branches.
+  useEffect(() => {
+    const onRefresh = () => {
+      const { picked: p, entry: e, busy: b } = latest.current;
+      if (p && !b) void rerun.current(p, e?.path);
+    };
+    window.addEventListener(REFRESH_EVENT, onRefresh);
+    return () => window.removeEventListener(REFRESH_EVENT, onRefresh);
+  }, []);
+
+  // Après la relance : le fichier qui était ouvert l'est de nouveau, s'il fait toujours partie des différences.
+  useEffect(() => {
+    const path = reopen.current;
+    if (!path || !result) return;
+    reopen.current = null;
+    const e = result.changes.find((c) => c.path === path);
+    if (e) void openFile(e);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [result]);
 
   // Un autre dépôt Azure ou un autre clone : l'ancien résultat n'a plus de sens.
   useEffect(() => {

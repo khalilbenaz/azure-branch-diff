@@ -134,6 +134,7 @@
 </ul>
 <p>Les fichiers qui ne diffèrent que par des <b>espaces</b> (indentation, lignes vides, espaces de fin de ligne, CRLF / LF) sont aussi masqués. L'analyse se fait en arrière-plan juste après la comparaison. Le bandeau indique sa progression et permet d'afficher ces fichiers.</p>
 <figure><img class="shot" src="img/02-diff.webp" width="1400" height="900" loading="lazy" alt="Diff côte à côte, cible à gauche et source à droite" /><figcaption>Cible (master) à gauche, source (feature/data) à droite.</figcaption></figure>
+<p>Le bouton ⟳ (<b>Actualiser</b>, à côté du projet) recharge projets, dépôts et branches, et relance la comparaison affichée avec les dernières versions, sans recliquer sur <b>Comparer</b>.</p>
 <p>Dans la liste des fichiers, vous pouvez filtrer par nom ou par extension. Cliquez sur un dossier pour le replier, ou utilisez <b>Tout replier</b>.</p>
 <figure><img class="shot" src="img/09-folded.webp" width="1400" height="900" loading="lazy" alt="Liste des fichiers avec le dossier racine replié" /><figcaption>Dossiers repliables, avec le nombre de fichiers.</figcaption></figure>
         </section>
@@ -172,7 +173,7 @@
         <section id="maj">
           <h2><span class="n">08</span>Mises à jour et sécurité</h2>
 <ul>
-<li>Sous Windows, une nouvelle version s'installe au redémarrage. Sous macOS, un bandeau propose de la télécharger.</li>
+<li>Les mises à jour sont automatiques, sous Windows comme sous macOS : la nouvelle version est téléchargée en arrière-plan, vérifiée, puis installée au redémarrage (bandeau « Redémarrer pour installer », ou à la fermeture de l'app).</li>
 <li>Toute poussée vers Azure demande une confirmation explicite.</li>
 <li>L'app refuse un dépôt dont la configuration exécute des commandes (filtres, pilotes de merge, hooks).</li>
 </ul>

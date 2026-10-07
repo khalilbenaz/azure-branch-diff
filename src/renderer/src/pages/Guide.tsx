@@ -85,8 +85,9 @@ const SECTIONS: Section[] = [
           fichiers.
         </p>
         <p>
-          Dans la liste des fichiers, filtrez par nom ou par extension. Cliquez sur un dossier pour le replier, ou utilisez <em>Tout replier</em>. Le
-          diff s’affiche côte à côte ou en vue unifiée.
+          Le bouton ⟳ (<em>Actualiser</em>, à côté du projet) recharge projets, dépôts et branches, et relance la comparaison affichée avec les
+          dernières versions, sans recliquer sur <em>Comparer</em>. Dans la liste des fichiers, filtrez par nom ou par extension. Cliquez sur un
+          dossier pour le replier, ou utilisez <em>Tout replier</em>. Le diff s’affiche côte à côte ou en vue unifiée.
         </p>
       </>
     ),
@@ -165,8 +166,8 @@ const SECTIONS: Section[] = [
           En bas de la barre latérale, choisissez <em>Système</em>, <em>Clair</em> ou <em>Sombre</em>. Le choix est retenu d’une session à l’autre.
         </li>
         <li>
-          Les mises à jour sont détectées automatiquement. Sur Windows, elles s’installent au redémarrage. Sur macOS, un bandeau propose de
-          télécharger la nouvelle version.
+          Les mises à jour sont automatiques, sous Windows comme sous macOS : la nouvelle version est téléchargée en arrière-plan, vérifiée, puis
+          installée au redémarrage (bandeau « Redémarrer pour installer », ou à la fermeture de l’app).
         </li>
       </ul>
     ),

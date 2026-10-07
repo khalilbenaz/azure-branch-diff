@@ -125,3 +125,46 @@ test('installation Windows silencieuse avec relance de l’app', async () => {
   await u.install();
   expect(updater.installArgs).toEqual([true, true]);
 });
+
+test('macOS avec installateur intégré : téléchargement, vérification puis installation automatique', async () => {
+  const updater = new FakeUpdater();
+  const states: UpdateState[] = [];
+  const opened: string[] = [];
+  const installs: boolean[] = [];
+  let canInstall = true;
+  const mac = {
+    staged: () => null,
+    download: async (_info: unknown, progress: (p: number) => void) => {
+      progress(50);
+      progress(100);
+    },
+    install: async (relaunch: boolean) => {
+      installs.push(relaunch);
+      return canInstall;
+    },
+  };
+  const u = createUpdater({ updater, platform: 'darwin', isPackaged: true, releasesUrl: RELEASES, send: (s) => states.push(s), openExternal: async (url) => void opened.push(url), mac });
+  expect(updater.autoDownload).toBe(false); // électron-updater ne télécharge pas : l'app s'en charge
+  updater.emit('update-available', { version: '2.0.0', files: [] });
+  await vi.waitFor(() => expect(states.at(-1)).toEqual({ kind: 'ready', version: '2.0.0' }));
+  expect(states).toContainEqual({ kind: 'downloading', version: '2.0.0', percent: 50 });
+  await u.installOnQuit();
+  expect(installs).toEqual([false]);
+  await u.install();
+  expect(installs).toEqual([false, true]);
+  expect(opened).toEqual([]);
+  canInstall = false; // dossier non modifiable : page des versions
+  await u.install();
+  expect(opened).toEqual([RELEASES]);
+});
+
+test('macOS : échec du téléchargement intégré → message, nouvel essai possible', async () => {
+  const updater = new FakeUpdater();
+  const states: UpdateState[] = [];
+  const mac = { staged: () => null, download: async () => Promise.reject(new Error('sha')), install: async () => true };
+  const u = createUpdater({ updater, platform: 'darwin', isPackaged: true, releasesUrl: RELEASES, send: (s) => states.push(s), openExternal: async () => {}, mac });
+  updater.emit('update-available', { version: '2.0.0', files: [] });
+  await vi.waitFor(() => expect(states.at(-1)).toEqual({ kind: 'error', message: 'Le téléchargement de la mise à jour a échoué.' }));
+  await u.check();
+  expect(updater.checks).toBe(1);
+});

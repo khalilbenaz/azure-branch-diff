@@ -1,6 +1,7 @@
-import { app, BrowserWindow, dialog, ipcMain, nativeTheme, safeStorage, session, shell } from 'electron';
+import { app, BrowserWindow, dialog, ipcMain, nativeTheme, net, safeStorage, session, shell } from 'electron';
 import { autoUpdater } from 'electron-updater';
-import { join } from 'node:path';
+import { execFile, spawn } from 'node:child_process';
+import { join, resolve } from 'node:path';
 import icon from '../../build/icon.png?asset';
 import pkg from '../../package.json';
 import { API_METHODS } from '../shared/api';
@@ -9,6 +10,7 @@ import { createAzureContext } from './azure/client';
 import { fakeContext } from './azure/fake';
 import { createHandlers } from './ipc';
 import { createUpdater } from './updater';
+import { createMacInstaller, type MacInstaller } from './macUpdate';
 import { SettingsStore, type ThemeSource } from './settings';
 import { isSafeExternalUrl } from './urls';
 
@@ -111,7 +113,29 @@ app.whenReady().then(() => {
       return r.response === 0;
     },
   });
+  // macOS : l'app installe elle-même ses mises à jour (pas de signature Developer ID pour Squirrel.Mac).
+  let mac: MacInstaller | undefined;
+  if (process.platform === 'darwin' && app.isPackaged) {
+    try {
+      mac = createMacInstaller({
+        arch: process.arch,
+        bundlePath: resolve(app.getPath('exe'), '..', '..', '..'),
+        bundleId: 'com.khalilbenaz.azurebranchdiff',
+        tmpDir: app.getPath('temp'),
+        repo: 'khalilbenaz/azure-branch-diff',
+        pid: process.pid,
+        fetch: (url) => net.fetch(url),
+        run: (cmd, args) =>
+          new Promise((ok, ko) => execFile(cmd, args, { encoding: 'utf8', maxBuffer: 4 << 20 }, (e, out) => (e ? ko(e) : ok(out)))),
+        spawnDetached: (cmd, args) => spawn(cmd, args, { detached: true, stdio: 'ignore' }).unref(),
+        quit: () => app.quit(),
+      });
+    } catch {
+      mac = undefined; // emplacement inattendu : notification et téléchargement manuel
+    }
+  }
   const updates = createUpdater({
+    mac,
     updater: autoUpdater,
     platform: process.platform,
     // Pas de contrôle en développement ni en mode démo/tests.
@@ -124,6 +148,14 @@ app.whenReady().then(() => {
   ipcMain.handle('update:check', () => updates.check());
   ipcMain.handle('update:install', () => updates.install());
   updates.start();
+  // Fermeture avec une version prête : elle est installée (sans relance), comme sous Windows.
+  let installingOnQuit = false;
+  app.on('before-quit', (e) => {
+    if (process.platform !== 'darwin' || installingOnQuit || updates.state().kind !== 'ready') return;
+    installingOnQuit = true;
+    e.preventDefault();
+    void updates.installOnQuit().finally(() => app.quit());
+  });
 
   for (const m of API_METHODS) {
     ipcMain.handle(`api:${m}`, (_e, ...args: unknown[]) => (handlers[m] as (...a: unknown[]) => unknown)(...args));
