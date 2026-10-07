@@ -94,7 +94,7 @@
           <li><a href="#comparer">Comparer : Cible ← Source</a></li>
           <li><a href="#local">Clone local et dossier téléchargé</a></li>
           <li><a href="#pr">Pull Request et conflits Azure</a></li>
-          <li><a href="#merge">Merge local, dans toutes les directions</a></li>
+          <li><a href="#merge">Fusionner une branche dans une autre</a></li>
           <li><a href="#theme">Thème clair, sombre ou système</a></li>
           <li><a href="#maj">Mises à jour et sécurité</a></li>
         </ol>
@@ -153,15 +153,15 @@
 <figure><img class="shot" src="img/05-resolver.webp" width="1400" height="900" loading="lazy" alt="Éditeur de résolution de conflit à trois volets" /><figcaption>Résolution dans l'app : garder source, cible, les deux, ou éditer le résultat.</figcaption></figure>
         </section>
         <section id="merge">
-          <h2><span class="n">06</span>Merge local, dans toutes les directions</h2>
-<p><b>Fusionner</b> fusionne la source dans la cible avec git, sur votre poste, dans toutes les directions : Azure → Azure, local → Azure, Azure → local, local → local.</p>
+          <h2><span class="n">06</span>Fusionner une branche dans une autre</h2>
+<p>Dans <b>Comparer</b>, choisissez la <b>cible</b> (à gauche, la branche qui reçoit) et la <b>source</b> (à droite, la branche à intégrer), puis <b>Fusionner</b>. Il faut un clone local du dépôt. La fusion est préparée à part : votre dossier de travail n'est pas modifié.</p>
 <ol>
-<li>Le merge se fait dans un <b>worktree temporaire</b>. Votre copie de travail n'est pas touchée, sauf si vous la choisissez comme cible et qu'elle est propre.</li>
-<li>S'il y a des conflits, l'onglet <b>Merge local</b> les liste. Un conflit de texte se règle dans l'éditeur. Pour un binaire ou un fichier supprimé d'un côté, choisissez <b>Garder source</b>, <b>Garder cible</b> ou <b>Supprimer le fichier</b>.</li>
-<li>Écrivez le message, puis cliquez sur <b>Valider le commit</b>. Les hooks git ne sont pas exécutés.</li>
-<li>Si la cible est Azure, le commit est poussé après confirmation. Si une politique de branche refuse la poussée, l'app propose de créer une PR à la place. Si la cible est locale, <b>Pousser vers origin</b> est facultatif.</li>
+<li><b>Fusion préparée</b> : git fusionne tout ce qu'il peut tout seul.</li>
+<li><b>Régler les conflits</b> : chaque conflit est présenté seul, version de la cible et version de la source côte à côte. Choisissez <b>Garder main</b>, <b>Garder dev</b> ou <b>Garder les deux</b>, ou modifiez le fichier final à la main, puis <b>Valider ce fichier</b> : le suivant s'ouvre.</li>
+<li><b>Enregistrer la fusion</b> : crée le commit de fusion sur la cible, dans votre clone.</li>
+<li><b>Envoyer sur Azure</b> : automatique (après confirmation) si la cible est une branche Azure, sinon facultatif. Si une politique de branche refuse l'envoi, l'app propose une PR à la place.</li>
 </ol>
-<figure><img class="shot" src="img/07-merge.webp" width="1400" height="900" loading="lazy" alt="Merge local : conflits résolus et message de commit" /><figcaption>Merge local : conflits, commit, push.</figcaption></figure>
+<figure><img class="shot" src="img/07-merge.webp" width="1400" height="900" loading="lazy" alt="Fusion : étapes et résolution conflit par conflit" /><figcaption>Un conflit à la fois : garder main, dev, ou les deux.</figcaption></figure>
         </section>
         <section id="theme">
           <h2><span class="n">07</span>Thème clair, sombre ou système</h2>

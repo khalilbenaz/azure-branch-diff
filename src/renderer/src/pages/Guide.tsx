@@ -113,31 +113,36 @@ const SECTIONS: Section[] = [
   },
   {
     id: 'g-merge',
-    title: 'Merge local, dans toutes les directions',
+    title: 'Fusionner une branche dans une autre',
     body: (
       <>
         <p>
-          <em>Fusionner</em> fusionne la source dans la cible avec git, sur votre poste. Il faut un clone local (barre latérale → <em>Clone local</em>
-          ).
+          Dans <em>Comparer</em>, choisissez la <strong>cible</strong> (à gauche, la branche qui reçoit) et la <strong>source</strong> (à droite, la
+          branche à intégrer), puis <em>Fusionner</em>. Il faut un clone local du dépôt (barre latérale → <em>Clone local</em>). La fusion est
+          préparée à part : votre dossier de travail n’est pas modifié.
         </p>
+        <p>L’onglet de fusion affiche quatre étapes :</p>
         <ol>
           <li>
-            Le merge se fait dans un <strong>worktree temporaire</strong> : votre copie de travail n’est pas touchée, sauf si vous la choisissez comme
-            cible et qu’elle est propre.
+            <strong>Fusion préparée</strong> : git fusionne tout ce qu’il peut tout seul.
           </li>
           <li>
-            S’il y a des conflits, l’onglet <strong>Merge local</strong> les liste. Pour un conflit de texte, utilisez l’éditeur. Pour un binaire ou
-            un fichier supprimé d’un côté, choisissez <em>Garder source</em>, <em>Garder cible</em> ou <em>Supprimer le fichier</em>.
+            <strong>Régler les conflits</strong> : là où les deux branches ont modifié les mêmes lignes. Le premier fichier s’ouvre tout seul. Chaque
+            conflit est présenté seul, avec la version de la cible et celle de la source côte à côte : <em>Garder main</em>, <em>Garder dev</em> ou{' '}
+            <em>Garder les deux</em>, ou modifiez le fichier final à la main. Puis <em>Valider ce fichier</em> : le suivant s’ouvre. Pour un binaire
+            ou un fichier supprimé d’un côté, choisissez la version à garder.
           </li>
           <li>
-            Écrivez le message puis cliquez sur <em>Valider le commit</em>. Les hooks git ne sont pas exécutés.
+            <strong>Enregistrer la fusion</strong> : crée le commit de fusion sur la cible, dans votre clone.
           </li>
           <li>
-            Si la cible est Azure, le commit est poussé, après confirmation. Si la poussée est refusée par une politique de branche, l’app propose de
-            créer une PR à la place. Si la cible est locale, <em>Pousser vers origin</em> reste facultatif.
+            <strong>Envoyer sur Azure</strong> : automatique (après confirmation) si la cible est une branche Azure ; sinon facultatif. Si Azure
+            refuse l’envoi direct (politique de branche), l’app propose de créer une PR à la place.
           </li>
         </ol>
-        <p>Vous pouvez annuler à tout moment avant le commit : le worktree temporaire est supprimé.</p>
+        <p>
+          <em>Abandonner</em>, à tout moment avant l’enregistrement, laisse la cible inchangée.
+        </p>
       </>
     ),
   },

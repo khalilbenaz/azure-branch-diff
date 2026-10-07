@@ -75,7 +75,7 @@ Liste des fichiers : les fichiers qui ne diffèrent que par des espaces (indenta
 ### Conflits
 
 - **PR Azure** : onglet **Conflits PR** — « Régler dans Azure » ou « Régler dans l'app » (cible à gauche, source à droite, résultat modifiable, *Garder cible / source / les deux*).
-- **Merge local** : onglet **Merge local** — même éditeur, départ du fichier fusionné par git ; fichiers binaires, liens ou supprimés d'un côté : garder un côté ou supprimer. Puis **Valider le commit** et **Pousser**.
+- **Fusion (merge local)** : onglet **Merge local**, en 4 étapes (fusion préparée → conflits → enregistrer → envoyer sur Azure). Chaque conflit est présenté seul, version de la cible et de la source côte à côte : **Garder main / dev / les deux**, ou édition du fichier final ; fichiers binaires ou supprimés d'un côté : garder une version ou supprimer.
 
 ![Merge local : conflits résolus, commit](site/img/07-merge.webp)
 

@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
-import type { ApiError, FileSide, MergeConflict, MergeResolution } from '../../../shared/types';
+import type { ApiError, FileSide, MergeConflict, MergeResolution, MergeState } from '../../../shared/types';
 import { api, asApiError, call } from '../lib/api';
 import { useApp } from '../lib/context';
 import { ErrorBanner } from '../components/ErrorBanner';
@@ -7,13 +7,34 @@ import { Resolver } from '../components/Resolver';
 
 const KIND_LABEL: Record<MergeConflict['kind'], string> = {
   text: 'Modifié des deux côtés',
-  binary: 'Binaire ou non UTF-8',
-  deleted: 'Supprimé d’un côté',
+  binary: 'Fichier binaire ou non UTF-8',
+  deleted: 'Supprimé d’un côté, modifié de l’autre',
 };
 
 type Sides = { base: FileSide; target: FileSide; source: FileSide; merged: FileSide };
 
-/** Merge local : conflits, commit, push. */
+/** Nom lisible d'une branche : « origin/main » → « main ». */
+const short = (label: string) => label.replace(/^origin\//, '');
+const folder = (p: string) => p.split(/[\\/]/).filter(Boolean).pop() ?? p;
+
+type StepState = 'done' | 'current' | 'todo';
+
+/** Étapes de la fusion, dans l'ordre où l'utilisateur les vit. */
+function steps(m: MergeState, remaining: number): { label: string; state: StepState }[] {
+  const committed = m.phase === 'committed' || m.phase === 'pushed';
+  const conflictsLabel = m.conflicts.length ? `Régler les conflits (${m.conflicts.length})` : 'Aucun conflit';
+  return [
+    { label: 'Fusion préparée', state: 'done' },
+    { label: conflictsLabel, state: remaining > 0 && !committed ? 'current' : 'done' },
+    { label: 'Enregistrer la fusion', state: committed ? 'done' : remaining > 0 ? 'todo' : 'current' },
+    {
+      label: m.targetIsRemote ? 'Envoyer sur Azure' : 'Envoyer sur Azure (facultatif)',
+      state: m.phase === 'pushed' ? 'done' : m.phase === 'committed' ? 'current' : 'todo',
+    },
+  ];
+}
+
+/** Merge local : conflits, enregistrement (commit), envoi (push). */
 export function Merge({ active }: { active: boolean }) {
   const app = useApp();
   const m = app.merge;
@@ -49,7 +70,7 @@ export function Merge({ active }: { active: boolean }) {
 
   useEffect(() => {
     if (!m) return;
-    setMessage(`Merge ${m.sourceLabel.replace(/^origin\//, '')} into ${m.targetLabel.replace(/^origin\//, '')}`);
+    setMessage(`Merge ${short(m.sourceLabel)} into ${short(m.targetLabel)}`);
     setPolicyRefused(false);
     setCurrent(null);
     setSides(null);
@@ -69,9 +90,18 @@ export function Merge({ active }: { active: boolean }) {
     }
   }
 
+  // Le premier conflit à régler s'ouvre tout seul ; après chaque fichier réglé, le suivant.
+  const nextOpen = m?.conflicts.find((c) => !c.resolved) ?? null;
+  useEffect(() => {
+    if (!active || !m || current || !nextOpen) return;
+    void open(nextOpen);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [active, m, current, nextOpen?.path]);
+
   const resolve = (path: string, r: MergeResolution) =>
     run(async () => {
       app.setMerge(await call(api.mergeResolve(path, r)));
+      currentRef.current = null;
       setCurrent(null);
       setSides(null);
     });
@@ -90,7 +120,7 @@ export function Merge({ active }: { active: boolean }) {
     run(async () => {
       const st = await call(api.mergeCommit(message));
       app.setMerge(st);
-      // Cible Azure : le push est la finalité de cette direction.
+      // Cible Azure : l'envoi est la finalité de cette direction.
       if (st.targetIsRemote) {
         try {
           app.setMerge(await call(api.mergePush()));
@@ -105,7 +135,7 @@ export function Merge({ active }: { active: boolean }) {
     run(async () => {
       if (m?.phase === 'committed' && m.targetIsRemote) {
         const ok = window.confirm(
-          `Le commit de merge ${m.commit?.slice(0, 10)} n'a pas été poussé vers ${m.targetLabel}. Il reste conservé dans le clone (refs/abd/merges/). Terminer quand même ?`,
+          `La fusion n'a pas été envoyée sur Azure (${short(m.targetLabel)}). Elle reste enregistrée dans le clone (refs/abd/merges/). Terminer quand même ?`,
         );
         if (!ok) return;
       }
@@ -116,7 +146,7 @@ export function Merge({ active }: { active: boolean }) {
 
   const abort = () =>
     run(async () => {
-      if (!window.confirm('Annuler le merge ? La branche cible reste inchangée.')) return;
+      if (!window.confirm(`Abandonner la fusion ? ${m ? short(m.targetLabel) : 'La cible'} reste inchangée.`)) return;
       await call(api.mergeAbort());
       app.setMerge(null);
     });
@@ -136,12 +166,15 @@ export function Merge({ active }: { active: boolean }) {
   if (!m)
     return (
       <div className="empty">
-        <div className="empty-inner" style={{ maxWidth: 600 }}>
-          <h2>Aucun merge local en cours</h2>
+        <div className="empty-inner" style={{ maxWidth: 620 }}>
+          <h2>Aucune fusion en cours</h2>
           <p className="muted">
-            Dans « Comparer », choisissez une source et une cible (Azure ou locales), puis « Fusionner ». Le merge se fait dans un worktree temporaire
-            : votre copie de travail ne passe jamais par un état de merge ; si la cible est la branche extraite, elle avance seulement après le
-            commit.
+            Pour fusionner une branche dans une autre : dans « Comparer », choisissez la <strong>cible</strong> (à gauche, la branche qui reçoit) et
+            la <strong>source</strong> (à droite, la branche à intégrer), puis cliquez sur « Fusionner ».
+          </p>
+          <p className="muted">
+            La fusion est préparée à part, dans votre clone : votre dossier de travail n'est pas modifié, et rien n'est envoyé sur Azure sans votre
+            accord.
           </p>
           <div>
             <button className="btn btn-primary" onClick={() => app.goTo('compare')}>
@@ -152,27 +185,35 @@ export function Merge({ active }: { active: boolean }) {
       </div>
     );
 
+  const tName = short(m.targetLabel);
+  const sName = short(m.sourceLabel);
   const remaining = m.conflicts.filter((c) => !c.resolved).length;
   const cur = m.conflicts.find((c) => c.path === current) ?? null;
   const open_ = m.phase === 'conflicts' || m.phase === 'ready';
+  const where =
+    m.location === 'worktree'
+      ? `Préparée à part dans le clone « ${folder(m.root)} » : votre dossier de travail n'est pas modifié.`
+      : `Dans votre dossier de travail « ${folder(m.root)} ».`;
 
   return (
     <>
-      <div className="page-head">
+      <div className="page-head merge-head">
         <div className="title">
-          <strong>Merge local</strong>
-          <span className="mono muted">
-            {m.targetLabel} ← {m.sourceLabel}
+          <strong>
+            Fusionner <span className="branch">{sName}</span> dans <span className="branch">{tName}</span>
+          </strong>
+          <span className="muted small" title="Worktree git temporaire ; les hooks git ne sont pas exécutés.">
+            {where}
           </span>
         </div>
-        {m.conflicts.length > 0 && open_ && (
-          <span className={remaining ? 'chip chip-edit' : 'chip chip-add'}>
-            {remaining ? `${remaining} conflit${remaining > 1 ? 's' : ''} sur ${m.conflicts.length}` : 'Conflits résolus'}
-          </span>
-        )}
-        <span className="chip chip-ren">worktree temporaire · copie de travail intacte</span>
-        <span className="spacer" />
-        <span className="small muted">Hooks git non exécutés</span>
+        <ol className="stepper" aria-label="Étapes de la fusion">
+          {steps(m, remaining).map((s, i) => (
+            <li key={s.label} className={`step-${s.state}`} aria-current={s.state === 'current' ? 'step' : undefined}>
+              <span className="step-n">{s.state === 'done' ? '✓' : i + 1}</span>
+              {s.label}
+            </li>
+          ))}
+        </ol>
       </div>
       {error && (
         <div className="pad" style={{ paddingBottom: 0 }}>
@@ -183,7 +224,8 @@ export function Merge({ active }: { active: boolean }) {
                 Créer une PR à la place
               </button>
               <span className="small muted">
-                Le commit de merge part sur une branche dédiée, puis une PR vers {m.targetLabel.replace(/^origin\//, '')} est créée.
+                Azure refuse l'envoi direct sur {tName} (politique de branche). La fusion part sur une branche dédiée et une PR vers {tName} est
+                créée.
               </span>
             </div>
           )}
@@ -194,7 +236,7 @@ export function Merge({ active }: { active: boolean }) {
         <div className="content">
           <div className="card success">
             <h3>
-              Rien à fusionner : {m.targetLabel} contient déjà {m.sourceLabel}.
+              Rien à fusionner : {tName} contient déjà tout ce qu'apporte {sName}.
             </h3>
             <div>
               <button className="btn" onClick={close}>
@@ -207,15 +249,25 @@ export function Merge({ active }: { active: boolean }) {
 
       {(m.phase === 'committed' || m.phase === 'pushed') && (
         <div className="content">
-          <div className="card success">
-            <h3>{m.phase === 'pushed' ? 'Merge commité et poussé.' : 'Merge commité.'}</h3>
-            <p className="mono small">
-              {m.commit?.slice(0, 10)} · {m.targetLabel}
-            </p>
+          <div className="card success merge-done">
+            <h3>
+              ✓ {sName} est fusionné dans {tName}.
+            </h3>
+            {m.phase === 'pushed' ? (
+              <p>
+                La fusion est <strong>envoyée sur Azure</strong> : {tName} est à jour sur le serveur.
+              </p>
+            ) : (
+              <p>
+                La fusion est <strong>enregistrée dans votre clone</strong>, mais <strong>pas encore sur Azure</strong>.
+                {m.targetIsRemote ? '' : ' Envoyez-la si vous voulez que les autres la voient.'}
+              </p>
+            )}
+            <p className="mono small muted">commit {m.commit?.slice(0, 10)}</p>
             <div className="row">
               {m.phase === 'committed' && (
-                <button className="btn btn-primary" disabled={busy} onClick={push}>
-                  {busy ? 'Push…' : `Pousser vers origin/${m.targetLabel.replace(/^origin\//, '')}`}
+                <button className="btn btn-primary" disabled={busy} onClick={push} title={`git push origin ${tName}`}>
+                  {busy ? 'Envoi…' : `Envoyer ${tName} sur Azure`}
                 </button>
               )}
               <button className="btn" disabled={busy} onClick={close}>
@@ -228,22 +280,31 @@ export function Merge({ active }: { active: boolean }) {
 
       {open_ && (
         <div className="conflicts-split">
-          <ul className="conflict-list" aria-label="Conflits du merge">
-            {m.conflicts.length === 0 && <li className="pad muted">Aucun conflit : le merge est prêt à être commité.</li>}
-            {m.conflicts.map((c) => (
-              <li key={c.path} className={current === c.path ? 'conflict-item selected' : 'conflict-item'}>
-                <button className="link-row" onClick={() => open(c)} disabled={c.resolved}>
-                  <span className="mono">{c.path}</span>
-                  <span className="small muted">{KIND_LABEL[c.kind]}</span>
-                  {c.resolved ? <span className="state-done">Résolu</span> : <span className="state-todo">À résoudre</span>}
-                </button>
-              </li>
-            ))}
-          </ul>
+          <div className="conflict-col">
+            <div className="conflict-col-head">
+              {m.conflicts.length === 0
+                ? 'Aucun conflit'
+                : remaining
+                  ? `${remaining} fichier${remaining > 1 ? 's' : ''} à régler sur ${m.conflicts.length}`
+                  : 'Tous les fichiers sont réglés'}
+            </div>
+            <ul className="conflict-list" aria-label="Conflits du merge">
+              {m.conflicts.length === 0 && <li className="pad muted">Git a tout fusionné sans conflit. Il reste à enregistrer la fusion.</li>}
+              {m.conflicts.map((c) => (
+                <li key={c.path} className={current === c.path ? 'conflict-item selected' : 'conflict-item'}>
+                  <button className="link-row" onClick={() => open(c)} disabled={c.resolved}>
+                    <span className="mono">{c.path}</span>
+                    <span className="small muted">{KIND_LABEL[c.kind]}</span>
+                    {c.resolved ? <span className="state-done">✓ Réglé</span> : <span className="state-todo">À régler</span>}
+                  </button>
+                </li>
+              ))}
+            </ul>
+          </div>
           <section className="resolver" aria-label="Résolution">
             {!cur && (
               <div className="diff-empty">
-                {remaining ? 'Choisissez un conflit à gauche.' : 'Tous les conflits sont résolus : validez le commit.'}
+                {remaining ? 'Choisissez un fichier à gauche.' : `Tout est prêt : enregistrez la fusion de ${sName} dans ${tName}.`}
               </div>
             )}
             {cur && cur.kind === 'text' && !sides && <div className="diff-empty">Chargement…</div>}
@@ -254,22 +315,22 @@ export function Merge({ active }: { active: boolean }) {
                 sourceLabel={m.sourceLabel}
                 targetLabel={m.targetLabel}
                 busy={busy}
-                submitLabel="Marquer résolu"
-                resultHint="écrit dans le worktree"
+                submitLabel="Valider ce fichier"
+                resultHint="enregistré avec la fusion"
                 onSubmit={(r) => resolve(cur.path, r)}
               />
             )}
             {cur && cur.kind !== 'text' && (
               <div className="diff-empty">
                 <p>
-                  <span className="mono">{cur.path}</span> : {KIND_LABEL[cur.kind].toLowerCase()}. Choisissez la version à garder.
+                  <span className="mono">{cur.path}</span> : {KIND_LABEL[cur.kind].toLowerCase()}. Quelle version garder ?
                 </p>
                 <div className="row" style={{ justifyContent: 'center' }}>
-                  <button className="btn" disabled={busy} onClick={() => resolve(cur.path, { kind: 'source' })}>
-                    Garder source
-                  </button>
                   <button className="btn" disabled={busy} onClick={() => resolve(cur.path, { kind: 'target' })}>
-                    Garder cible
+                    Garder la version de {tName}
+                  </button>
+                  <button className="btn" disabled={busy} onClick={() => resolve(cur.path, { kind: 'source' })}>
+                    Garder la version de {sName}
                   </button>
                   <button className="btn" disabled={busy} onClick={() => resolve(cur.path, { kind: 'delete' })}>
                     Supprimer le fichier
@@ -279,21 +340,26 @@ export function Merge({ active }: { active: boolean }) {
             )}
             <div className="commit-panel">
               <label>
-                Message du commit de merge
+                Message de la fusion
                 <input className="field-mono" value={message} onChange={(e) => setMessage(e.target.value)} />
               </label>
               <button className="btn" disabled={busy} onClick={abort}>
-                Annuler le merge
+                Abandonner
               </button>
               <button
                 className="btn btn-primary"
                 disabled={busy || remaining > 0}
                 onClick={commit}
-                title={remaining ? 'Résolvez d’abord tous les conflits' : ''}
+                title={remaining ? 'Réglez d’abord tous les conflits' : `Crée le commit de fusion sur ${tName}`}
               >
-                {busy ? 'Commit…' : m.targetIsRemote ? 'Valider le commit et pousser' : 'Valider le commit'}
+                {busy ? 'Enregistrement…' : m.targetIsRemote ? 'Enregistrer et envoyer sur Azure' : 'Enregistrer la fusion'}
               </button>
             </div>
+            {remaining > 0 && (
+              <p className="small muted commit-hint">
+                Encore {remaining} fichier{remaining > 1 ? 's' : ''} à régler avant d'enregistrer.
+              </p>
+            )}
           </section>
         </div>
       )}
