@@ -1,7 +1,7 @@
 {
   "name": "azure-branch-diff",
   "productName": "Azure Branch Diff",
-  "version": "1.5.2",
+  "version": "1.5.3",
   "description": "Comparer des branches Azure DevOps, créer des PR et résoudre les conflits",
   "author": "Khalil Benazzouz",
   "private": true,

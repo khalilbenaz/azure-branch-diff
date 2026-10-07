@@ -58,7 +58,14 @@ test('téléchargement vérifié puis remplacement au redémarrage', async () =>
   await mac.download({ version: '9.9.9', files: FILES }, (p) => progress.push(p));
   expect(fetched).toEqual(['https://github.com/khalilbenaz/azure-branch-diff/releases/download/v9.9.9/Azure-Branch-Diff-mac-arm64.zip']);
   expect(progress.at(-1)).toBe(100);
-  expect(calls.map((c) => c[0])).toEqual(['/usr/bin/ditto', '/usr/bin/defaults', '/usr/bin/defaults', '/usr/bin/codesign', '/usr/bin/xattr']);
+  expect(calls.map((c) => c.slice(0, 2).join(' '))).toEqual([
+    `/usr/bin/ditto -x`,
+    '/usr/bin/defaults read',
+    '/usr/bin/defaults read',
+    '/usr/bin/codesign --verify',
+    '/usr/bin/codesign -d', // app installée signée ad hoc : pas d'exigence de certificat
+    '/usr/bin/xattr -dr',
+  ]);
   expect(await mac.install(true)).toBe(true);
   const [sh, script, pid, target, staged, relaunch] = spawned[0];
   expect([sh, pid, target, relaunch]).toEqual(['/bin/sh', '4242', bundle, '1']);
@@ -101,4 +108,45 @@ test.runIf(process.platform !== 'win32')('script de remplacement : nouvelle vers
   expect(r.status).toBe(0);
   expect(readFileSync(join(target, 'v'), 'utf8')).toBe('new');
   expect(existsSync(`${target}.abd-previous`)).toBe(false);
+});
+
+test('cleanupUpdateDirs : supprime les restes de mise à jour, rien d’autre', async () => {
+  const { cleanupUpdateDirs } = await import('../../src/main/macUpdate');
+  const t = mkdtempSync(join(tmpdir(), 'abd-clean-'));
+  mkdirSync(join(t, 'abd-update-a1B2c3', 'app'), { recursive: true });
+  mkdirSync(join(t, 'abd-merge-xyz123'));
+  mkdirSync(join(t, 'autre'));
+  await cleanupUpdateDirs(t);
+  expect(existsSync(join(t, 'abd-update-a1B2c3'))).toBe(false);
+  expect(existsSync(join(t, 'abd-merge-xyz123'))).toBe(true);
+  expect(existsSync(join(t, 'autre'))).toBe(true);
+});
+
+const REQ = 'identifier "com.khalilbenaz.azurebranchdiff" and certificate root = H"d51b5f9119a6702451cd5dbd236f46464d7bbff5"';
+
+test('app signée par le certificat du projet : la mise à jour doit être signée par le même certificat', async () => {
+  const runs: string[][] = [];
+  let sameCert = true;
+  const base = setup().deps;
+  const deps: MacInstallerDeps = {
+    ...base,
+    run: async (cmd, args) => {
+      runs.push([cmd, ...args]);
+      if (cmd.endsWith('defaults')) return args[2] === 'CFBundleIdentifier' ? 'com.khalilbenaz.azurebranchdiff' : '9.9.9';
+      if (cmd.endsWith('codesign') && args[0] === '-d') return `Executable=/x\ndesignated => ${REQ}\n`;
+      if (cmd.endsWith('codesign') && args.some((a) => a.startsWith('-R=')) && !sameCert) throw new Error('code failed to satisfy specified code requirement(s)');
+      return '';
+    },
+  };
+  await createMacInstaller(deps).download({ version: '9.9.9', files: FILES }, () => {});
+  expect(runs.find((r) => r.includes(`-R=${REQ}`))).toBeTruthy();
+  sameCert = false;
+  await expect(createMacInstaller(deps).download({ version: '9.9.9', files: FILES }, () => {})).rejects.toThrow(/requirement/);
+});
+
+test('designatedRequirement : ad hoc → null ; certificat → exigence', async () => {
+  const { designatedRequirement } = await import('../../src/main/macUpdate');
+  expect(await designatedRequirement({ run: async () => '# designated => cdhash H"91910c04d3e12eac42d5e13705a2848d4fa8d87f"\n' }, '/A.app')).toBeNull();
+  expect(await designatedRequirement({ run: async () => `designated => ${REQ}\n` }, '/A.app')).toBe(REQ);
+  expect(await designatedRequirement({ run: async () => Promise.reject(new Error('x')) }, '/A.app')).toBeNull();
 });

@@ -51,6 +51,26 @@ jobs:
       - run: npm ci
       - run: npm test
       - run: npm run build
+      - name: Certificat de signature macOS (auto-signé, identité stable)
+        if: runner.os == 'macOS'
+        env:
+          MAC_CERT_P12: ${{ secrets.MAC_CERT_P12 }}
+          MAC_CERT_PASSWORD: ${{ secrets.MAC_CERT_PASSWORD }}
+        run: |
+          if [ -z "$MAC_CERT_P12" ]; then echo "Pas de certificat : signature ad hoc."; exit 0; fi
+          kc="$RUNNER_TEMP/signing.keychain-db"
+          kp="$(openssl rand -hex 24)"
+          echo "$MAC_CERT_P12" | base64 --decode > "$RUNNER_TEMP/cert.p12"
+          security create-keychain -p "$kp" "$kc"
+          security set-keychain-settings -lut 3600 "$kc"
+          security unlock-keychain -p "$kp" "$kc"
+          security import "$RUNNER_TEMP/cert.p12" -k "$kc" -P "$MAC_CERT_PASSWORD" -T /usr/bin/codesign >/dev/null
+          security set-key-partition-list -S apple-tool:,apple: -s -k "$kp" "$kc" >/dev/null
+          rm -f "$RUNNER_TEMP/cert.p12"
+          sha1="$(security find-identity -p codesigning "$kc" | awk '/Azure Branch Diff Code Signing/ {print $2; exit}')"
+          test -n "$sha1"
+          echo "MAC_SIGN_KEYCHAIN=$kc" >> "$GITHUB_ENV"
+          echo "MAC_SIGN_IDENTITY=$sha1" >> "$GITHUB_ENV"
       - name: Construire les installeurs
         run: npx electron-builder ${{ matrix.args }} --publish never
       - name: Vérifier l'app packagée (démarrage, fuses)

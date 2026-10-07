@@ -9,6 +9,8 @@ files:
   - out/**
   - package.json
 asar: true
+# macOS : signature avec le certificat auto-signé du projet quand il est fourni (CI).
+afterSign: build/after-sign.cjs
 # Fuses Electron : ferment les portes d'entrée (exécution comme Node, NODE_OPTIONS, --inspect, code hors asar).
 electronFuses:
   runAsNode: false
@@ -30,7 +32,7 @@ mac:
     - target: zip
       arch: [arm64, x64]
   category: public.app-category.developer-tools
-  # Signature ad hoc : pas de certificat Developer ID. hardenedRuntime exige une vraie signature.
+  # Signature ad hoc par electron-builder, puis certificat auto-signé du projet (build/after-sign.cjs).
   identity: "-"
   hardenedRuntime: false
   icon: build/icon.png
