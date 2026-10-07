@@ -35,7 +35,7 @@ Les installeurs ne sont **pas signés par un certificat éditeur** :
 Vérification au démarrage puis toutes les 4 heures (Releases GitHub) :
 
 - **Windows** : téléchargement en arrière-plan, installation au redémarrage ;
-- **macOS** : l'installation automatique exige une signature Apple Developer ID ; l'app signale la nouvelle version et ouvre le téléchargement du `.dmg`.
+- **macOS** : téléchargement en arrière-plan, vérification (empreinte SHA-512 publiée dans la release, identifiant et version de l'app, signature), puis remplacement de l'app au redémarrage. Si l'app n'est pas dans un dossier modifiable (ex. lancée depuis le `.dmg`), elle ouvre la page de téléchargement.
 
 ## Connexion et organisations
 

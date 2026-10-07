@@ -144,4 +144,14 @@ test('fichiers qui ne diffèrent que par des espaces : masqués, affichables', a
   await note.getByRole('button', { name: 'Afficher' }).click();
   await expect(page.getByRole('button', { name: /old\.sql/ })).toContainText('espaces seulement');
   await note.getByRole('button', { name: 'Masquer' }).click();
+
+  // « Actualiser » relance la comparaison affichée (sans recliquer sur Comparer) et rouvre le fichier ouvert.
+  await page.getByRole('button', { name: /Service\.cs/ }).click();
+  await expect(page.locator('.monaco-diff-editor')).toBeVisible();
+  writeFileSync(join(dir, 'nouveau.cs'), 'ajouté après la comparaison\n');
+  writeFileSync(join(dir, 'src/Service.cs'), 'version actualisée\n');
+  await page.getByRole('button', { name: 'Actualiser la liste' }).click();
+  await expect(page.getByRole('button', { name: /nouveau\.cs/ })).toBeVisible();
+  await expect(page.getByRole('button', { name: /Service\.cs/ })).toHaveClass(/selected/);
+  await expect(page.locator('.monaco-diff-editor')).toContainText('version actualisée');
 });
