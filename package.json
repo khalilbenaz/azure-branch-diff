@@ -25,7 +25,7 @@
   "devDependencies": {
     "@axe-core/playwright": "^4.13.0",
     "@monaco-editor/react": "^4.7.0",
-    "@playwright/test": "^1.63.0",
+    "@playwright/test": "^1.64.0",
     "@types/diff": "^7.0.2",
     "@types/node": "^26.6.4",
     "@types/react": "^19.3.0",
