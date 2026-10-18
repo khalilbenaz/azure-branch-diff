@@ -21,7 +21,7 @@ electronFuses:
 # Releases GitHub : source des mises à jour automatiques (latest.yml / latest-mac.yml).
 publish:
   provider: github
-  owner: khalilbenaz
+  owner: vantaflow
   repo: azure-branch-diff
   releaseType: release
 mac:
