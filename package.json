@@ -3,7 +3,7 @@
   "productName": "Azure Branch Diff",
   "version": "1.5.4",
   "description": "Comparer des branches Azure DevOps, créer des PR et résoudre les conflits",
-  "author": "Khalil Benazzouz",
+  "author": "vantaflow",
   "private": true,
   "main": "out/main/index.js",
   "scripts": {
@@ -47,7 +47,7 @@
   "license": "MIT",
   "repository": {
     "type": "git",
-    "url": "https://github.com/khalilbenaz/azure-branch-diff.git"
+    "url": "https://github.com/vantaflow/azure-branch-diff.git"
   },
-  "homepage": "https://khalilbenaz.github.io/azure-branch-diff/"
+  "homepage": "https://vantaflow.github.io/azure-branch-diff/"
 }

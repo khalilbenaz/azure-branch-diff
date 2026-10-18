@@ -73,7 +73,7 @@
         <a href="guide.html">Guide</a>
         <a href="#telecharger">Télécharger</a>
         <a href="#securite">Sécurité</a>
-        <a href="https://github.com/khalilbenaz/azure-branch-diff">GitHub</a>
+        <a href="https://github.com/vantaflow/azure-branch-diff">GitHub</a>
       </nav>
     </header>
 
@@ -84,7 +84,7 @@
         <div class="cta">
           <a class="btn primary" id="primary" href="#telecharger">Télécharger</a>
           <a class="btn" href="guide.html">Guide d'utilisation</a>
-          <a class="btn" href="https://github.com/khalilbenaz/azure-branch-diff">Code source</a>
+          <a class="btn" href="https://github.com/vantaflow/azure-branch-diff">Code source</a>
         </div>
         <p class="meta" id="meta">macOS (Apple Silicon et Intel) · Windows 64 bits · gratuit, open source (MIT)</p>
       </div>
@@ -114,7 +114,7 @@
         <div class="card"><h3>1.5 · Mises à jour sur Mac</h3><p>Installation automatique sur macOS aussi, avec vérification de l'empreinte et de la signature ; identité stable, plus de mot de passe du trousseau à chaque version.</p></div>
         <div class="card"><h3>1.4 · Moins de bruit</h3><p>Les deux volets montrent l'état actuel des branches ; fichiers déjà portés sur la cible et différences d'espaces masqués. Thème clair / sombre, guide intégré, dossiers repliables.</p></div>
       </div>
-      <p class="meta"><a href="https://github.com/khalilbenaz/azure-branch-diff/releases">Historique complet des versions</a></p>
+      <p class="meta"><a href="https://github.com/vantaflow/azure-branch-diff/releases">Historique complet des versions</a></p>
     </section>
 
     <section>
@@ -135,9 +135,9 @@
     <section id="telecharger">
       <h2>Télécharger <span id="version" class="meta"></span></h2>
       <div class="downloads">
-        <div class="card"><h3>macOS · Apple Silicon</h3><p class="meta">M1, M2, M3, M4…</p><a class="btn primary" data-os="mac-arm64" href="https://github.com/khalilbenaz/azure-branch-diff/releases/latest/download/Azure-Branch-Diff-mac-arm64.dmg">Télécharger le .dmg</a></div>
-        <div class="card"><h3>macOS · Intel</h3><p class="meta">Mac Intel</p><a class="btn" data-os="mac-x64" href="https://github.com/khalilbenaz/azure-branch-diff/releases/latest/download/Azure-Branch-Diff-mac-x64.dmg">Télécharger le .dmg</a></div>
-        <div class="card"><h3>Windows</h3><p class="meta">Windows 10 / 11, 64 bits</p><a class="btn" data-os="win" href="https://github.com/khalilbenaz/azure-branch-diff/releases/latest/download/Azure-Branch-Diff-Setup.exe">Télécharger l'installeur</a></div>
+        <div class="card"><h3>macOS · Apple Silicon</h3><p class="meta">M1, M2, M3, M4…</p><a class="btn primary" data-os="mac-arm64" href="https://github.com/vantaflow/azure-branch-diff/releases/latest/download/Azure-Branch-Diff-mac-arm64.dmg">Télécharger le .dmg</a></div>
+        <div class="card"><h3>macOS · Intel</h3><p class="meta">Mac Intel</p><a class="btn" data-os="mac-x64" href="https://github.com/vantaflow/azure-branch-diff/releases/latest/download/Azure-Branch-Diff-mac-x64.dmg">Télécharger le .dmg</a></div>
+        <div class="card"><h3>Windows</h3><p class="meta">Windows 10 / 11, 64 bits</p><a class="btn" data-os="win" href="https://github.com/vantaflow/azure-branch-diff/releases/latest/download/Azure-Branch-Diff-Setup.exe">Télécharger l'installeur</a></div>
       </div>
       <h3>Premier lancement</h3>
       <p>Les installeurs ne sont pas signés par un certificat éditeur :</p>
@@ -163,7 +163,7 @@
     </section>
 
     <footer>
-      Azure Branch Diff · licence MIT · <a href="https://github.com/khalilbenaz/azure-branch-diff/releases">Historique des versions</a> · <a href="https://github.com/khalilbenaz/azure-branch-diff/issues">Signaler un problème</a><br />
+      Azure Branch Diff · licence MIT · <a href="https://github.com/vantaflow/azure-branch-diff/releases">Historique des versions</a> · <a href="https://github.com/vantaflow/azure-branch-diff/issues">Signaler un problème</a><br />
       Projet indépendant, non affilié à Microsoft. Azure DevOps est une marque de Microsoft.
     </footer>
   </div>
@@ -180,7 +180,7 @@
         primary.textContent = os === 'win' ? 'Télécharger pour Windows' : 'Télécharger pour macOS';
       }
       // Version publiée (sans bloquer la page si l'API est indisponible).
-      fetch('https://api.github.com/repos/khalilbenaz/azure-branch-diff/releases/latest')
+      fetch('https://api.github.com/repos/vantaflow/azure-branch-diff/releases/latest')
         .then(function (r) { return r.ok ? r.json() : null; })
         .then(function (rel) {
           if (!rel || !rel.tag_name) return;

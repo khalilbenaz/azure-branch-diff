@@ -165,7 +165,7 @@ test('bandeau de mise à jour : version disponible, progression, prête', async 
     });
     await page.getByRole('button', { name: 'Télécharger' }).click();
     const opened = await app.evaluate(() => (globalThis as unknown as { opened: string[] }).opened);
-    expect(opened).toEqual(['https://github.com/khalilbenaz/azure-branch-diff/releases/latest']);
+    expect(opened).toEqual(['https://github.com/vantaflow/azure-branch-diff/releases/latest']);
   }
   await push({ kind: 'downloading', version: '9.9.9', percent: 37 });
   await expect(page.getByText(/Téléchargement de la version 9\.9\.9… 37 %/)).toBeVisible();

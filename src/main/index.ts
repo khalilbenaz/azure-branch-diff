@@ -16,7 +16,7 @@ import { isSafeExternalUrl } from './urls';
 
 // Version de l'app (app.getVersion() renvoie celle d'Electron quand l'app n'est pas packagée).
 const APP_VERSION = pkg.version;
-const RELEASES_URL = 'https://github.com/khalilbenaz/azure-branch-diff/releases/latest';
+const RELEASES_URL = 'https://github.com/vantaflow/azure-branch-diff/releases/latest';
 
 // Tests E2E : profil isolé (jamais pris en compte par l'app installée, sauf pour le test de démarrage).
 if (process.env.ABD_USER_DATA && (!app.isPackaged || process.env.AZ_FAKE === '1')) app.setPath('userData', process.env.ABD_USER_DATA);
@@ -123,7 +123,7 @@ app.whenReady().then(() => {
         bundlePath: resolve(app.getPath('exe'), '..', '..', '..'),
         bundleId: 'com.khalilbenaz.azurebranchdiff',
         tmpDir: app.getPath('temp'),
-        repo: 'khalilbenaz/azure-branch-diff',
+        repo: 'vantaflow/azure-branch-diff',
         pid: process.pid,
         fetch: (url) => net.fetch(url),
         run: (cmd, args) =>

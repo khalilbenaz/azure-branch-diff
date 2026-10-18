@@ -1,7 +1,7 @@
 # Azure Branch Diff
 
-[![CI](https://github.com/khalilbenaz/azure-branch-diff/actions/workflows/ci.yml/badge.svg)](https://github.com/khalilbenaz/azure-branch-diff/actions/workflows/ci.yml)
-[![Release](https://img.shields.io/github/v/release/khalilbenaz/azure-branch-diff)](https://github.com/khalilbenaz/azure-branch-diff/releases/latest)
+[![CI](https://github.com/vantaflow/azure-branch-diff/actions/workflows/ci.yml/badge.svg)](https://github.com/vantaflow/azure-branch-diff/actions/workflows/ci.yml)
+[![Release](https://img.shields.io/github/v/release/vantaflow/azure-branch-diff)](https://github.com/vantaflow/azure-branch-diff/releases/latest)
 
 Application de bureau (macOS et Windows) pour **comparer, fusionner et publier** des branches Azure DevOps — sans cloner, ou avec votre clone local.
 
@@ -11,7 +11,7 @@ Application de bureau (macOS et Windows) pour **comparer, fusionner et publier**
 - **Plusieurs organisations** : un jeton par organisation ou un jeton multi-organisations, bascule depuis la barre latérale.
 - **Thème clair, sombre ou système**, sur toute l'interface ; **guide d'utilisation** intégré (onglet *Guide*).
 
-**Site et téléchargements : https://khalilbenaz.github.io/azure-branch-diff/** · **[Guide d'utilisation](https://khalilbenaz.github.io/azure-branch-diff/guide.html)**
+**Site et téléchargements : https://vantaflow.github.io/azure-branch-diff/** · **[Guide d'utilisation](https://vantaflow.github.io/azure-branch-diff/guide.html)**
 
 ![Diff entre deux branches : cible à gauche, source à droite](site/img/02-diff.webp)
 
@@ -19,9 +19,9 @@ Application de bureau (macOS et Windows) pour **comparer, fusionner et publier**
 
 | Système | Fichier |
 |---|---|
-| macOS Apple Silicon | [`Azure-Branch-Diff-mac-arm64.dmg`](https://github.com/khalilbenaz/azure-branch-diff/releases/latest/download/Azure-Branch-Diff-mac-arm64.dmg) |
-| macOS Intel | [`Azure-Branch-Diff-mac-x64.dmg`](https://github.com/khalilbenaz/azure-branch-diff/releases/latest/download/Azure-Branch-Diff-mac-x64.dmg) |
-| Windows 64 bits | [`Azure-Branch-Diff-Setup.exe`](https://github.com/khalilbenaz/azure-branch-diff/releases/latest/download/Azure-Branch-Diff-Setup.exe) |
+| macOS Apple Silicon | [`Azure-Branch-Diff-mac-arm64.dmg`](https://github.com/vantaflow/azure-branch-diff/releases/latest/download/Azure-Branch-Diff-mac-arm64.dmg) |
+| macOS Intel | [`Azure-Branch-Diff-mac-x64.dmg`](https://github.com/vantaflow/azure-branch-diff/releases/latest/download/Azure-Branch-Diff-mac-x64.dmg) |
+| Windows 64 bits | [`Azure-Branch-Diff-Setup.exe`](https://github.com/vantaflow/azure-branch-diff/releases/latest/download/Azure-Branch-Diff-Setup.exe) |
 
 Les installeurs ne sont **pas signés par un certificat éditeur** :
 
@@ -83,7 +83,7 @@ Si Azure refuse le push (politique de branche), l'app propose **« Créer une PR
 
 ### Thème et guide
 
-En bas de la barre latérale (et sur l'écran de connexion) : **Système**, **Clair** ou **Sombre**. Le choix est retenu et s'applique à toute l'interface, éditeur compris. L'onglet **Guide** reprend le [guide d'utilisation](https://khalilbenaz.github.io/azure-branch-diff/guide.html).
+En bas de la barre latérale (et sur l'écran de connexion) : **Système**, **Clair** ou **Sombre**. Le choix est retenu et s'applique à toute l'interface, éditeur compris. L'onglet **Guide** reprend le [guide d'utilisation](https://vantaflow.github.io/azure-branch-diff/guide.html).
 
 ![Thème sombre](site/img/10-dark.webp)
 

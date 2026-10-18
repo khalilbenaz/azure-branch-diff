@@ -24,7 +24,7 @@ class FakeUpdater extends EventEmitter implements UpdaterLike {
   }
 }
 
-const RELEASES = 'https://github.com/khalilbenaz/azure-branch-diff/releases/latest';
+const RELEASES = 'https://github.com/vantaflow/azure-branch-diff/releases/latest';
 
 function setup(platform: NodeJS.Platform, isPackaged = true) {
   const updater = new FakeUpdater();

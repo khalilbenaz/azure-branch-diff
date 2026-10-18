@@ -1,6 +1,6 @@
 appId: com.khalilbenaz.azurebranchdiff
 productName: Azure Branch Diff
-copyright: Copyright © 2026 Khalil Benazzouz
+copyright: Copyright © 2026 vantaflow
 directories:
   # « .noindex » : Spotlight n'indexe pas les apps intermédiaires du build.
   output: release.noindex

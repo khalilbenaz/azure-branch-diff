@@ -27,7 +27,7 @@ function setup(over: Partial<MacInstallerDeps> = {}, plist = { id: 'com.khalilbe
     bundlePath: bundle,
     bundleId: 'com.khalilbenaz.azurebranchdiff',
     tmpDir: mkdtempSync(join(tmpdir(), 'abd-tmp-')),
-    repo: 'khalilbenaz/azure-branch-diff',
+    repo: 'vantaflow/azure-branch-diff',
     pid: 4242,
     fetch: async (url) => {
       fetched.push(url);
@@ -56,7 +56,7 @@ test('téléchargement vérifié puis remplacement au redémarrage', async () =>
   const mac = createMacInstaller(deps);
   const progress: number[] = [];
   await mac.download({ version: '9.9.9', files: FILES }, (p) => progress.push(p));
-  expect(fetched).toEqual(['https://github.com/khalilbenaz/azure-branch-diff/releases/download/v9.9.9/Azure-Branch-Diff-mac-arm64.zip']);
+  expect(fetched).toEqual(['https://github.com/vantaflow/azure-branch-diff/releases/download/v9.9.9/Azure-Branch-Diff-mac-arm64.zip']);
   expect(progress.at(-1)).toBe(100);
   expect(calls.map((c) => c.slice(0, 2).join(' '))).toEqual([
     `/usr/bin/ditto -x`,
